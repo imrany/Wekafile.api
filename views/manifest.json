@@ -1,0 +1,9 @@
+{
+    "short_name":"File share",
+    "name":"File share",
+    "description":"Share file between devices with easy",
+    "start_url":"/",
+    "orientation":"portrait",
+    "display":"standalone",
+    "icons":[]
+}
