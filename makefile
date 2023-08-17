@@ -19,7 +19,3 @@ dev:
 copy:
 	@echo 'copying views to build dir...'
 	cp -r ./views ./build
-
-host:
-	 @echo 'Finding device ip address...'
-	 bash ./commands
