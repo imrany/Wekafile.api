@@ -1,87 +1,245 @@
 import pool from "../pg";
+import { createTransport } from "nodemailer"
+import { MailDetails } from "../types/types";
+import {genSalt, compare, hash} from "bcryptjs";
+import { verify, sign } from "jsonwebtoken"
 
-const verifyEmail=async(req:any,res:any)=>{
+export const verifyEmail=async(req:any,res:any)=>{
     try {
-        
+        const email=req.params.email;
+        const code=createCode()
+        pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
+            if (error) {
+                let mailTranporter=createTransport({
+                    service:'gmail',
+                    auth:{
+                        user:process.env.TRANSPORTER,
+                        pass:process.env.PASSWORD
+                    }
+                });
+                let details={
+                    from:process.env.TRANSPORTER,
+                    to:email,
+                    subject:`Verification Code`,
+                    text:`Your One-Time Password (OTP) is \n${code}`
+                }
+                mailTranporter.sendMail(details,(err:any)=>{
+                    if(err){
+                        res.send({error:`Cannot sent verification code, try again!`});
+                    }else{
+                        res.send({code:code})
+                    }
+                })
+            }else{
+                res.send({error:"User Exist!"})
+            }
+        })
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
 }
 
-const registerUser=async(req:any,res:any)=>{
+export const registerUser=async(req:any,res:any)=>{
     try {
-        
+        const {username,email,password}=req.body;
+        if (username&&email&&password) {
+            const salt=await genSalt(10);
+            const hashedPassword=await hash(password,salt);
+            pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
+                if (error) {
+                    pool.query('INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *', [username, email, hashedPassword], (error, results) => {
+                        if (error) {
+                            console.log(error)
+                            res.status(408).send({error:"Failed to add user, Try again!!"})
+                        }else{
+                            res.status(201).send({
+                                msg:`Welcome ${results.rows[0].username}`,
+                                data:{
+                                    id:results.rows[0].id,
+                                    username:results.rows[0].username,
+                                    email:results.rows[0].username,
+                                    token:generateUserToken(results.rows[0].id)
+                                }
+                            })
+                        }
+                    }) 
+                }else{
+                    res.status(409).send({error:"User Exist!"})
+                }
+            })    
+        } else {
+            res.status(403).send({error:"Fill all the required fields!!"})
+        }
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
 }
 
-const loginUser=async(req:any,res:any)=>{
+export const loginUser=async(req:any,res:any)=>{
     try {
-        
+        const {email,password}=req.body;
+        if(email&&password){
+            pool.query('SELECT * FROM users WHERE email = $1 AND password = $2',[email,password],async (error,results)=>{
+                if(error){
+                    console.log(error)
+                    res.status(400).send({error:'Failed to sign in, try again!'})
+                }else{
+                    if (results.rows[0].email&&await compare(password,results.rows[0].password)) {
+                        res.status(201).send({
+                            msg:`Welcome ${results.rows[0].username}`,
+                            data:{
+                                id:results.rows[0].id,
+                                username:results.rows[0].username,
+                                email:results.rows[0].username,
+                                token:generateUserToken(results.rows[0].id)
+                            }
+                        })
+                    } else {
+                        res.status(401).send({error:'Invalid Credentials'})
+                    }
+                }
+            })
+        }else{
+            res.status(403).send({error:"Fill all the required fields!!"})
+        }
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
 }
 
-export {
-    registerUser,
+export const getUsers=async(req:any,res:any)=>{
+    try {
+        pool.query('SELECT * FROM users RETURNING *', (error, results) => {
+            if (error) {
+                res.status(408).send({error:`Failed to get users.`})
+            }else{
+                res.status(200).json(results.rows)
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
 }
 
-// export const getUsers = (request, response) => {
-//     pool.query('SELECT * FROM users ORDER BY id ASC', (error, results) => {
-//       if (error) {
-//         throw error
-//       }
-//       response.status(200).json(results.rows)
-//     })
-// }
+export const updateUser=async(req:any,res:any)=>{
+    try {
+        const email = parseInt(res.params.email)
+        const { username, password } = req.body
+        pool.query(
+        'UPDATE users SET username = $1, password = $2 WHERE email = $3',
+        [username, password, email],
+        (error, results) => {
+            if (error) {
+                console.log(error)
+                res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
+            }else{
+                let mailTranporter=createTransport({
+                    service:'gmail',
+                    auth:{
+                        user:process.env.TRANSPORTER,
+                        pass:process.env.PASSWORD
+                    }
+                });
+                let details:MailDetails={
+                    from:process.env.TRANSPORTER,
+                    to:email,
+                    subject:`Your Account details were updated`,
+                    text:`Hello ${username},\n Your new account username is ${username}\n\nNew password is ${password},\nVisit https://file-shareio.web.app/`
+                }
+                mailTranporter.sendMail(details,(err:any)=>{
+                    if(err){
+                        res.send({error:`Cannot sent email, try again!`});
+                    } else{
+                        res.status(200).send({msg:`Account details updated successful`})
+                    }
+                })
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
 
-// export const getUserById = (request, response) => {
-//     const id = parseInt(request.params.id)
-  
-//     pool.query('SELECT * FROM users WHERE id = $1', [id], (error, results) => {
-//       if (error) {
-//         throw error
-//       }
-//       response.status(200).json(results.rows)
-//     })
-// }
+export const getUserDetails=async(req:any,res:any)=>{
+    try {
+        const email = parseInt(res.params.email)
+        pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
+            if (error) {
+                console.log(error)
+                res.status(404).send({error:`Account associated with the email address ${email} does not exist!`})
+            }else{
+                res.status(200).json({
+                    data:{
+                        username:results.rows[0].username,
+                        email:results.rows[0].email
+                    }
+                })
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
 
-// export const createUser = (request, response) => {
-//     const { name, email } = request.body
+export const protectUser=async(req:any,res:any,next:any)=>{
+    let token
+    if(req.headers.authorization&&req.headers.authorization.startsWith('Bearer')){
+        try{
+            token=req.headers.authorization.split(' ')[1]
+            verify(token,`${process.env.JWT_SECRET}`);
+            next()
+        }catch (error:any){
+            res.status(401).send({error:'Not Authorised☠'})
+        }
+    }
+    if(!token){
+      res.status(401).send({error:'No Token Available☠'})
+    }
+};
 
-//     pool.query('INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *', [name, email], (error, results) => {
-//         if (error) {
-//         throw error
-//         }
-//         response.status(201).send(`User added with ID: ${results.rows[0].id}`)
-//     })
-// } 
+export const deleteUser=async(req:any,res:any)=>{
+    try {
+        const email = parseInt(res.params.email)
+        pool.query('DELETE FROM users WHERE email = $1', [email], (error, results) => {
+            if (error) {
+                res.status(408).send({error:`Failed to delete account associated with the email ${email}`})
+            }else{
+                let mailTranporter=createTransport({
+                    service:'gmail',
+                    auth:{
+                        user:process.env.TRANSPORTER,
+                        pass:process.env.PASSWORD
+                    }
+                });
+                let details:MailDetails={
+                    from:process.env.TRANSPORTER,
+                    to:results.rows[0].email,
+                    subject:`Your Account Was Deleted`,
+                    text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+                }
+                mailTranporter.sendMail(details,(err:any)=>{
+                    if(err){
+                        res.send({error:`Cannot sent email, try again!`});
+                    } else{
+                        res.status(200).send({msg:`Account details updated successful`})
+                    }
+                })
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
 
-// export const updateUser = (request, response) => {
-//     const id = parseInt(request.params.id)
-//     const { name, email } = request.body
-  
-//     pool.query(
-//       'UPDATE users SET name = $1, email = $2 WHERE id = $3',
-//       [name, email, id],
-//       (error, results) => {
-//         if (error) {
-//           throw error
-//         }
-//         response.status(200).send(`User modified with ID: ${id}`)
-//       }
-//     )
-// }
+const generateUserToken=(id:any)=>{
+    return sign({id},`${process.env.JWT_SECRET}`,{
+        expiresIn:'10d'
+    })
+};
 
-// export const deleteUser = (request, response) => {
-//     const id = parseInt(request.params.id)
-  
-//     pool.query('DELETE FROM users WHERE id = $1', [id], (error, results) => {
-//       if (error) {
-//         throw error
-//       }
-//       response.status(200).send(`User deleted with ID: ${id}`)
-//     })
-// }
+function createCode():string {
+    let date=new Date()
+    let hr=date.getHours()<10?`0${date.getHours()}`:date.getHours()
+    const code=`${hr}${date.getFullYear()}`
+    return code
+}
