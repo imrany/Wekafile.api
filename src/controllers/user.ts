@@ -1,10 +1,10 @@
 import pool from "../pg";
 import { createTransport } from "nodemailer"
-import { MailDetails } from "../types/types";
+import { MailDetails, Req } from "../types/types";
 import {genSalt, compare, hash} from "bcryptjs";
 import { verify, sign } from "jsonwebtoken"
 
-export const verifyEmail=async(req:any,res:any)=>{
+export const verifyEmail=async(req:Req,res:any)=>{
     try {
         const email=req.params.email;
         const code=createCode()
@@ -39,7 +39,7 @@ export const verifyEmail=async(req:any,res:any)=>{
     }
 }
 
-export const registerUser=async(req:any,res:any)=>{
+export const registerUser=async(req:Req,res:any)=>{
     try {
         const {username,email,password,lastLogin,userPlatform}=req.body;
         if (username&&email&&password) {
@@ -76,7 +76,7 @@ export const registerUser=async(req:any,res:any)=>{
     }
 }
 
-export const loginUser=async(req:any,res:any)=>{
+export const loginUser=async(req:Req,res:any)=>{
     try {
         const {email,password,lastLogin,userPlatform}=req.body;
         if(email&&password){
@@ -115,7 +115,7 @@ export const loginUser=async(req:any,res:any)=>{
     }
 }
 
-export const getUsers=async(req:any,res:any)=>{
+export const getUsers=async(req:Req,res:any)=>{
     try {
         pool.query('SELECT * FROM users RETURNING *', (error, results) => {
             if (error) {
@@ -129,9 +129,9 @@ export const getUsers=async(req:any,res:any)=>{
     }
 }
 
-export const updateUser=async(req:any,res:any)=>{
+export const updateUser=async(req:Req,res:any)=>{
     try {
-        const email = parseInt(res.params.email)
+        const email = req.params.email
         const { username, password, photo } = req.body
         pool.query(
         'UPDATE users SET username = $1, password = $2,photo = $3 WHERE email = $4',
@@ -168,7 +168,7 @@ export const updateUser=async(req:any,res:any)=>{
     }
 }
 
-export const getUserDetails=async(req:any,res:any)=>{
+export const getUserDetails=async(req:Req,res:any)=>{
     try {
         const email = parseInt(res.params.email)
         pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
@@ -206,7 +206,7 @@ export const protectUser=async(req:any,res:any,next:any)=>{
     }
 };
 
-export const deleteUser=async(req:any,res:any)=>{
+export const deleteUser=async(req:Req,res:any)=>{
     try {
         const email = parseInt(res.params.email)
         pool.query('DELETE FROM users WHERE email = $1', [email], (error, results) => {
@@ -240,7 +240,7 @@ export const deleteUser=async(req:any,res:any)=>{
     }
 }
 
-const generateUserToken=(id:any)=>{
+const generateUserToken=(id:string)=>{
     return sign({id},`${process.env.JWT_SECRET}`,{
         expiresIn:'10d'
     })
