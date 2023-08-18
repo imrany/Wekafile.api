@@ -4,10 +4,3 @@ export interface MailDetails{
     subject:string,
     text:string
 }
-
-export interface VerifyEmail{
-    body:{
-        email:string,
-        code:string
-    }
-}
