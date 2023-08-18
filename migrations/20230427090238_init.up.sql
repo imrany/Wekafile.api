@@ -1,13 +1,12 @@
 -- Add up migration script here
 create table users(
-    id varchar not null primary key,
+    email varchar not null primary key,
     username varchar not null,
-    email varchar not null unique,
-    photo varchar not null,
     password varchar not null,
-    lastLogin varchar not null,
-    ipAddress varchar not null,
-    userPlatform varchar not null
+    photo varchar,
+    lastLogin varchar,
+    ipAddress varchar,
+    userPlatform varchar
 );
 create index user_idx on users (email);
 

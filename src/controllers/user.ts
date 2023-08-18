@@ -6,10 +6,10 @@ import { verify, sign } from "jsonwebtoken"
 
 export const verifyEmail=async(req:Req,res:any)=>{
     try {
-        const email=req.params.email;
+        const email=req.body.email;
         const code=createCode()
         pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
-            if (error) {
+            if (!results.rows[0]) {
                 let mailTranporter=createTransport({
                     service:'gmail',
                     auth:{
@@ -17,7 +17,7 @@ export const verifyEmail=async(req:Req,res:any)=>{
                         pass:process.env.PASSWORD
                     }
                 });
-                let details={
+                let details:MailDetails={
                     from:process.env.TRANSPORTER,
                     to:email,
                     subject:`Verification Code`,
@@ -31,7 +31,7 @@ export const verifyEmail=async(req:Req,res:any)=>{
                     }
                 })
             }else{
-                res.send({error:"User Exist!"})
+                res.send({error:`Account using ${email} already exist!`})
             }
         })
     } catch (error:any) {
@@ -45,29 +45,22 @@ export const registerUser=async(req:Req,res:any)=>{
         if (username&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
+            pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [username, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
                 if (error) {
-                    pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [username, email, hashedPassword, lastLogin, userPlatform], (error, results) => {
-                        if (error) {
-                            console.log(error)
-                            res.status(408).send({error:"Failed to add user, Try again!!"})
-                        }else{
-                            res.status(201).send({
-                                msg:`Welcome ${results.rows[0].username}`,
-                                data:{
-                                    id:results.rows[0].id,
-                                    username:results.rows[0].username,
-                                    email:results.rows[0].username,
-                                    photo:results.rows[0].photo,
-                                    token:generateUserToken(results.rows[0].id)
-                                }
-                            })
-                        }
-                    }) 
+                    res.status(408).send({error:`Account using ${email} already exist!`})
                 }else{
-                    res.status(409).send({error:"User Exist!"})
+                    res.status(201).send({
+                        msg:`Welcome ${results.rows[0].username}`,
+                        data:{
+                            id:results.rows[0].id,
+                            username:results.rows[0].username,
+                            email:results.rows[0].username,
+                            photo:results.rows[0].photo,
+                            token:generateUserToken(results.rows[0].id)
+                        }
+                    })
                 }
-            })    
+            })   
         } else {
             res.status(403).send({error:"Fill all the required fields!!"})
         }
@@ -79,8 +72,11 @@ export const registerUser=async(req:Req,res:any)=>{
 export const loginUser=async(req:Req,res:any)=>{
     try {
         const {email,password,lastLogin,userPlatform}=req.body;
-        if(email&&password){
-            pool.query('SELECT * FROM users WHERE email = $1 AND password = $2',[email,password],async (error,results)=>{
+        const salt=await genSalt(10);
+        const hashedPassword=await hash(password,salt);
+        if(email&&password&&lastLogin&&userPlatform){
+            pool.query('SELECT * FROM users WHERE email = $1 AND password = $2',[email,hashedPassword],async (error,results)=>{
+                console.log(results.rows[0])
                 if(error){
                     console.log(error)
                     res.status(400).send({error:'Failed to sign in, try again!'})
@@ -117,9 +113,10 @@ export const loginUser=async(req:Req,res:any)=>{
 
 export const getUsers=async(req:Req,res:any)=>{
     try {
-        pool.query('SELECT * FROM users RETURNING *', (error, results) => {
+        pool.query('SELECT * FROM users', (error, results) => {
             if (error) {
-                res.status(408).send({error:`Failed to get users.`})
+                console.log(error)
+                res.status(404).send({error:`Failed to get users.`})
             }else{
                 res.status(200).json(results.rows)
             }
@@ -170,7 +167,7 @@ export const updateUser=async(req:Req,res:any)=>{
 
 export const getUserDetails=async(req:Req,res:any)=>{
     try {
-        const email = parseInt(res.params.email)
+        const email = req.params.email
         pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
             if (error) {
                 console.log(error)
