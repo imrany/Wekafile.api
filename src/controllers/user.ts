@@ -41,13 +41,13 @@ export const verifyEmail=async(req:any,res:any)=>{
 
 export const registerUser=async(req:any,res:any)=>{
     try {
-        const {username,email,password}=req.body;
+        const {username,email,password,lastLogin,userPlatform}=req.body;
         if (username&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
             pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
                 if (error) {
-                    pool.query('INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *', [username, email, hashedPassword], (error, results) => {
+                    pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [username, email, hashedPassword, lastLogin, userPlatform], (error, results) => {
                         if (error) {
                             console.log(error)
                             res.status(408).send({error:"Failed to add user, Try again!!"})
@@ -58,6 +58,7 @@ export const registerUser=async(req:any,res:any)=>{
                                     id:results.rows[0].id,
                                     username:results.rows[0].username,
                                     email:results.rows[0].username,
+                                    photo:results.rows[0].photo,
                                     token:generateUserToken(results.rows[0].id)
                                 }
                             })
@@ -77,7 +78,7 @@ export const registerUser=async(req:any,res:any)=>{
 
 export const loginUser=async(req:any,res:any)=>{
     try {
-        const {email,password}=req.body;
+        const {email,password,lastLogin,userPlatform}=req.body;
         if(email&&password){
             pool.query('SELECT * FROM users WHERE email = $1 AND password = $2',[email,password],async (error,results)=>{
                 if(error){
@@ -85,13 +86,20 @@ export const loginUser=async(req:any,res:any)=>{
                     res.status(400).send({error:'Failed to sign in, try again!'})
                 }else{
                     if (results.rows[0].email&&await compare(password,results.rows[0].password)) {
-                        res.status(201).send({
-                            msg:`Welcome ${results.rows[0].username}`,
-                            data:{
-                                id:results.rows[0].id,
-                                username:results.rows[0].username,
-                                email:results.rows[0].username,
-                                token:generateUserToken(results.rows[0].id)
+                        pool.query('UPDATE users SET lastLogin = $1, userPlatform = $2 WHERE email = $3',[lastLogin,userPlatform,results.rows[0].email],(error,results)=>{
+                            if(error){
+                                console.log(error)
+                            }else{
+                                res.status(201).send({
+                                    msg:`Welcome ${results.rows[0].username}`,
+                                    data:{
+                                        id:results.rows[0].id,
+                                        username:results.rows[0].username,
+                                        email:results.rows[0].username,
+                                        photo:results.rows[0].photo,
+                                        token:generateUserToken(results.rows[0].id)
+                                    }
+                                })
                             }
                         })
                     } else {
@@ -124,10 +132,10 @@ export const getUsers=async(req:any,res:any)=>{
 export const updateUser=async(req:any,res:any)=>{
     try {
         const email = parseInt(res.params.email)
-        const { username, password } = req.body
+        const { username, password, photo } = req.body
         pool.query(
-        'UPDATE users SET username = $1, password = $2 WHERE email = $3',
-        [username, password, email],
+        'UPDATE users SET username = $1, password = $2,photo = $3 WHERE email = $4',
+        [username, password, photo, email],
         (error, results) => {
             if (error) {
                 console.log(error)
@@ -171,7 +179,8 @@ export const getUserDetails=async(req:any,res:any)=>{
                 res.status(200).json({
                     data:{
                         username:results.rows[0].username,
-                        email:results.rows[0].email
+                        email:results.rows[0].email,
+                        photo:results.rows[0].photo
                     }
                 })
             }
