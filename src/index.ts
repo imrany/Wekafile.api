@@ -2,6 +2,7 @@ import express from "express"
 import { config } from "dotenv"
 import cors from "cors"
 import socket from "./websocket"
+import router from "./routes/api"
 config()
 
 const cors_option = {
@@ -15,6 +16,7 @@ app.use(express.static(`views`));
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
 app.use(cors(cors_option))
+app.use("/api",router)
 
 
 const port=process.env.PORT||8000
