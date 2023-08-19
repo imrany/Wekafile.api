@@ -45,7 +45,7 @@ export const registerUser=async(req:Req,res:any)=>{
         if (username&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [username, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
+            pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [`@${username}`, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
                 if (error) {
                     res.status(408).send({error:`Account using ${email} already exist!`})
                 }else{
@@ -54,7 +54,7 @@ export const registerUser=async(req:Req,res:any)=>{
                         data:{
                             id:results.rows[0].id,
                             username:results.rows[0].username,
-                            email:results.rows[0].username,
+                            email:results.rows[0].email,
                             photo:results.rows[0].photo,
                             token:generateUserToken(results.rows[0].id)
                         }
@@ -72,34 +72,35 @@ export const registerUser=async(req:Req,res:any)=>{
 export const loginUser=async(req:Req,res:any)=>{
     try {
         const {email,password,lastLogin,userPlatform}=req.body;
-        const salt=await genSalt(10);
-        const hashedPassword=await hash(password,salt);
         if(email&&password&&lastLogin&&userPlatform){
-            pool.query('SELECT * FROM users WHERE email = $1 AND password = $2',[email,hashedPassword],async (error,results)=>{
-                console.log(results.rows[0])
+            pool.query('SELECT * FROM users WHERE email = $1',[email],async (error,results)=>{
                 if(error){
                     console.log(error)
                     res.status(400).send({error:'Failed to sign in, try again!'})
                 }else{
-                    if (results.rows[0].email&&await compare(password,results.rows[0].password)) {
-                        pool.query('UPDATE users SET lastLogin = $1, userPlatform = $2 WHERE email = $3',[lastLogin,userPlatform,results.rows[0].email],(error,results)=>{
-                            if(error){
-                                console.log(error)
-                            }else{
-                                res.status(201).send({
-                                    msg:`Welcome ${results.rows[0].username}`,
-                                    data:{
-                                        id:results.rows[0].id,
-                                        username:results.rows[0].username,
-                                        email:results.rows[0].username,
-                                        photo:results.rows[0].photo,
-                                        token:generateUserToken(results.rows[0].id)
-                                    }
-                                })
-                            }
-                        })
-                    } else {
-                        res.status(401).send({error:'Invalid Credentials'})
+                    if(results.rows[0]){
+                        if (results.rows[0].email&&await compare(password,results.rows[0].password)) {
+                            pool.query('UPDATE users SET lastLogin = $1, userPlatform = $2 WHERE email = $3 RETURNING *',[lastLogin,userPlatform,results.rows[0].email],(error,results)=>{
+                                if(error){
+                                    console.log(error)
+                                }else{
+                                    res.status(201).send({
+                                        msg:`Welcome ${results.rows[0].username}`,
+                                        data:{
+                                            id:results.rows[0].id,
+                                            username:results.rows[0].username,
+                                            email:results.rows[0].email,
+                                            photo:results.rows[0].photo,
+                                            token:generateUserToken(results.rows[0].id)
+                                        }
+                                    })
+                                }
+                            })
+                        } else {
+                            res.status(401).send({error:'Invalid Credentials'})
+                        }
+                    }else{
+                        res.status(404).send({error:`Account associated with email ${email} does not exist!`})
                     }
                 }
             })
@@ -130,36 +131,200 @@ export const updateUser=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
         const { username, password, photo } = req.body
-        pool.query(
-        'UPDATE users SET username = $1, password = $2,photo = $3 WHERE email = $4',
-        [username, password, photo, email],
-        (error, results) => {
-            if (error) {
-                console.log(error)
-                res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
-            }else{
-                let mailTranporter=createTransport({
-                    service:'gmail',
-                    auth:{
-                        user:process.env.TRANSPORTER,
-                        pass:process.env.PASSWORD
+        if(username&&password&&photo){
+            //update username, password and photo
+            pool.query(
+                'UPDATE users SET username = $1, password = $2,photo = $3 WHERE email = $4',
+                [username, password, photo, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
+                    }else{
+                        let mailTranporter=createTransport({
+                            service:'gmail',
+                            auth:{
+                                user:process.env.TRANSPORTER,
+                                pass:process.env.PASSWORD
+                            }
+                        });
+                        let details:MailDetails={
+                            from:process.env.TRANSPORTER,
+                            to:email,
+                            subject:`Your Account details were updated`,
+                            text:`Hello ${username},\n Your new account username is ${username}\n\nNew password is ${password},\nVisit https://file-shareio.web.app/`
+                        }
+                        mailTranporter.sendMail(details,(err:any)=>{
+                            if(err){
+                                res.send({error:`Cannot sent email, try again!`});
+                            } else{
+                                res.status(200).send({msg:`Account details updated successful`})
+                            }
+                        })
                     }
-                });
-                let details:MailDetails={
-                    from:process.env.TRANSPORTER,
-                    to:email,
-                    subject:`Your Account details were updated`,
-                    text:`Hello ${username},\n Your new account username is ${username}\n\nNew password is ${password},\nVisit https://file-shareio.web.app/`
-                }
-                mailTranporter.sendMail(details,(err:any)=>{
-                    if(err){
-                        res.send({error:`Cannot sent email, try again!`});
-                    } else{
-                        res.status(200).send({msg:`Account details updated successful`})
+            })
+        }else if(username&&password&&!photo){
+            //update username and password only
+            pool.query(
+                'UPDATE users SET username = $1, password = $2 WHERE email = $3',
+                [username, password, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
+                    }else{
+                        let mailTranporter=createTransport({
+                            service:'gmail',
+                            auth:{
+                                user:process.env.TRANSPORTER,
+                                pass:process.env.PASSWORD
+                            }
+                        });
+                        let details:MailDetails={
+                            from:process.env.TRANSPORTER,
+                            to:email,
+                            subject:`Your Account details were updated`,
+                            text:`Hello ${username},\n Your new account username is ${username}\n\nNew password is ${password},\nVisit https://file-shareio.web.app/`
+                        }
+                        mailTranporter.sendMail(details,(err:any)=>{
+                            if(err){
+                                res.send({error:`Cannot sent email, try again!`});
+                            } else{
+                                res.status(200).send({msg:`Account details updated successful`})
+                            }
+                        })
                     }
-                })
-            }
-        })
+            })
+        }else if(username&&!password&&photo){
+            //update username and photo only
+            pool.query(
+                'UPDATE users SET username = $1, photo = $2 WHERE email = $2',
+                [username, photo, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
+                    }else{
+                        let mailTranporter=createTransport({
+                            service:'gmail',
+                            auth:{
+                                user:process.env.TRANSPORTER,
+                                pass:process.env.PASSWORD
+                            }
+                        });
+                        let details:MailDetails={
+                            from:process.env.TRANSPORTER,
+                            to:email,
+                            subject:`Your Account details were updated`,
+                            text:`Hello ${username},\n Your new account username is ${username}\n\n,Visit https://file-shareio.web.app/`
+                        }
+                        mailTranporter.sendMail(details,(err:any)=>{
+                            if(err){
+                                res.send({error:`Cannot sent email, try again!`});
+                            } else{
+                                res.status(200).send({msg:`Account details updated successful`})
+                            }
+                        })
+                    }
+            })
+        }else if(!username&&!password&&photo){
+            //update photo only
+            pool.query(
+                'UPDATE users SET photo = $1 WHERE email = $2',
+                [photo, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
+                    }else{
+                        let mailTranporter=createTransport({
+                            service:'gmail',
+                            auth:{
+                                user:process.env.TRANSPORTER,
+                                pass:process.env.PASSWORD
+                            }
+                        });
+                        let details:MailDetails={
+                            from:process.env.TRANSPORTER,
+                            to:email,
+                            subject:`Your Account details were updated`,
+                            text:`Hello ,\n Your account user profile has been updated.\n\nVisit https://file-shareio.web.app/`
+                        }
+                        mailTranporter.sendMail(details,(err:any)=>{
+                            if(err){
+                                res.send({error:`Cannot sent email, try again!`});
+                            } else{
+                                res.status(200).send({msg:`Account details updated successful`})
+                            }
+                        })
+                    }
+            })
+        }else if(!username&&password&&!photo){
+            //update password only
+            pool.query(
+                'UPDATE users SET password = $1 WHERE email = $2',
+                [password, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
+                    }else{
+                        let mailTranporter=createTransport({
+                            service:'gmail',
+                            auth:{
+                                user:process.env.TRANSPORTER,
+                                pass:process.env.PASSWORD
+                            }
+                        });
+                        let details:MailDetails={
+                            from:process.env.TRANSPORTER,
+                            to:email,
+                            subject:`Your Account details were updated`,
+                            text:`Hello, \nNew password is ${password},\nVisit https://file-shareio.web.app/`
+                        }
+                        mailTranporter.sendMail(details,(err:any)=>{
+                            if(err){
+                                res.send({error:`Cannot sent email, try again!`});
+                            } else{
+                                res.status(200).send({msg:`Account details updated successful`})
+                            }
+                        })
+                    }
+            })
+        }else if(username&&!password&&!photo){
+            //update username only
+            pool.query(
+                'UPDATE users SET username = $1 WHERE email = $2',
+                [username, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
+                    }else{
+                        let mailTranporter=createTransport({
+                            service:'gmail',
+                            auth:{
+                                user:process.env.TRANSPORTER,
+                                pass:process.env.PASSWORD
+                            }
+                        });
+                        let details:MailDetails={
+                            from:process.env.TRANSPORTER,
+                            to:email,
+                            subject:`Your Account details were updated`,
+                            text:`Hello, \nYour new account username is ${username},\nVisit https://file-shareio.web.app/`
+                        }
+                        mailTranporter.sendMail(details,(err:any)=>{
+                            if(err){
+                                res.send({error:`Cannot sent email, try again!`});
+                            } else{
+                                res.status(200).send({msg:`Account details updated successful`})
+                            }
+                        })
+                    }
+            })
+        }
+        
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
@@ -173,13 +338,17 @@ export const getUserDetails=async(req:Req,res:any)=>{
                 console.log(error)
                 res.status(404).send({error:`Account associated with the email address ${email} does not exist!`})
             }else{
-                res.status(200).json({
-                    data:{
-                        username:results.rows[0].username,
-                        email:results.rows[0].email,
-                        photo:results.rows[0].photo
-                    }
-                })
+                if(results.rows[0]){
+                    res.status(200).json({
+                        data:{
+                            username:results.rows[0].username,
+                            email:results.rows[0].email,
+                            photo:results.rows[0].photo
+                        }
+                    })
+                }else{
+                    res.status(404).send({error:`Account associated with the email address ${email} does not exist!`})
+                }
             }
         })
     } catch (error:any) {
@@ -205,31 +374,35 @@ export const protectUser=async(req:any,res:any,next:any)=>{
 
 export const deleteUser=async(req:Req,res:any)=>{
     try {
-        const email = parseInt(res.params.email)
-        pool.query('DELETE FROM users WHERE email = $1', [email], (error, results) => {
+        const email = req.params.email
+        pool.query('DELETE FROM users WHERE email = $1 RETURNING *', [email], (error, results) => {
             if (error) {
                 res.status(408).send({error:`Failed to delete account associated with the email ${email}`})
             }else{
-                let mailTranporter=createTransport({
-                    service:'gmail',
-                    auth:{
-                        user:process.env.TRANSPORTER,
-                        pass:process.env.PASSWORD
+                if (results.rows[0]) {
+                    let mailTranporter=createTransport({
+                        service:'gmail',
+                        auth:{
+                            user:process.env.TRANSPORTER,
+                            pass:process.env.PASSWORD
+                        }
+                    });
+                    let details:MailDetails={
+                        from:process.env.TRANSPORTER,
+                        to:results.rows[0].email,
+                        subject:`Your Account Was Deleted`,
+                        text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
                     }
-                });
-                let details:MailDetails={
-                    from:process.env.TRANSPORTER,
-                    to:results.rows[0].email,
-                    subject:`Your Account Was Deleted`,
-                    text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+                    mailTranporter.sendMail(details,(err:any)=>{
+                        if(err){
+                            res.send({error:`Cannot sent email, try again!`});
+                        } else{
+                            res.status(200).send({msg:`Account associated with email ${results.rows[0].email} deteled successful`})
+                        }
+                    })   
+                } else {
+                    res.status(404).send({error:`Account associated with email ${email} does not exist!`})
                 }
-                mailTranporter.sendMail(details,(err:any)=>{
-                    if(err){
-                        res.send({error:`Cannot sent email, try again!`});
-                    } else{
-                        res.status(200).send({msg:`Account details updated successful`})
-                    }
-                })
             }
         })
     } catch (error:any) {
