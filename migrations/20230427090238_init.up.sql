@@ -10,6 +10,18 @@ create table users(
 );
 create index user_idx on users (email);
 
+create table server(
+    filename varchar not null primary key,
+    email varchar not null,
+    username varchar not null,
+    uploadedAt varchar,
+    size varchar,
+    file varchar,
+    type varchar,
+    sharedTo int 
+);
+create index server_idx on server (email);
+
 -- transaction
 -- create table mpesa_transactions(
 --     phoneNumber int not null,
