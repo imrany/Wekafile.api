@@ -6,7 +6,7 @@ import router from "./routes/api"
 config()
 
 const cors_option = {
-    origin:["http://localhost:8000","http://localhost:3001"],
+    origin:["http://localhost:8000","http://localhost:3000"],
     methods: ["GET", "POST", "DELETE", "PATCH", "PUT"]
  }
 
@@ -26,7 +26,7 @@ const server=app.listen(port,()=>{
 
 let io = require("socket.io")(server,{
     cors: {
-        origin: ["http://localhost:8000","http://localhost:3001"],
+        origin: cors_option.origin,
         methods: ["GET", "POST"],
         transports: ['websocket', 'polling'],
         credentials: true

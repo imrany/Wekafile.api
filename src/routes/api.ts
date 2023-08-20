@@ -8,6 +8,6 @@ router.post("/auth/login",loginUser)
 router.get("/accounts/:email",protectUser,getUserDetails)
 // router.get("/accounts",getUsers)
 router.patch("/accounts/:email",protectUser,updateUser)
-router.delete("/accounts/:email",protectUser,deleteUser)
+router.delete("/accounts/:email",deleteUser)
 
 export default router
