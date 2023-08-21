@@ -30,9 +30,9 @@ create table sharedfiles(
     groupname varchar not null,
     uploadedAt varchar,
     size varchar,
-    file varchar,
+    file BYTEA,
     type varchar,
-    sharedTo int 
+    sharedTo varchar
 );
 create index sharedfiles_idx on sharedfiles (email);
 

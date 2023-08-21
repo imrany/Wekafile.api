@@ -1,3 +1,5 @@
+import pool from "../pg";
+
 export default function socket(io:any){
     let users:any=[{userid:"",photo:"",platform:""}]
     io.on("connection", function(socket: any) {
@@ -16,12 +18,50 @@ export default function socket(io:any){
             socket.emit("peers",users.slice(1,users.length))
         })
 
-        socket.on("upload", (file:any, err:any) => {
-            console.log(file);  
+        socket.on("upload_to_sharedfiles", (file_body:any, err:any) => {
+            pool.query('SELECT * FROM sharedfiles WHERE filename = $1',[file_body.filename],async (error,results)=>{
+                if(error){
+                    console.log(error)
+                    socket.emit("response",{error:'Failed store file, this file already exist!!'})
+                }else{
+                    if(results.rows){
+                        pool.query('INSERT INTO sharedfiles (filename,groupname,uploadedAt,size,file,type,sharedTo,email) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [file_body.filename,file_body.groupname,file_body.uploadedAt,file_body.size,file_body.file,file_body.type,file_body.sharedTo,file_body.email], (error:any, results) => {
+                            if (error) {
+                                socket.emit("response",{error:`Failed store file, ${file_body.filename} already exist!!`})
+                            }else{
+                                socket.emit("response",{
+                                    msg:`${file_body.filename} was successfully added`,
+                                })
+                                socket.broadcast.emit("notification",{
+                                    msg:`A new file had been shared.`,
+                                })
+                            }
+                        })   
+                    }else{
+                        socket.emit("response",{error:`Failed store file, ${file_body.filename} already exist!!`})
+                    }
+                }
+            })
+
             if(err){
                 console.log(err)
             }
-            socket.broadcast.emit("download",file)
+            // socket.broadcast.emit("download",file_body)
+        });
+
+        socket.on("fetch_from_sharedfiles", (email:string, err:any) => {
+            pool.query('SELECT * FROM sharedfiles WHERE email = $1',[email], (error, results) => {
+                if (error) {
+                    console.log(error)
+                    socket.emit("response",{error:`Failed fetch shared files.`})
+                }else{
+                    socket.emit("response",{files:results.rows,count:results.rowCount})
+                }
+            })
+
+            if(err){
+                console.log(err)
+            }
         });
 
         //disconnect
