@@ -19,7 +19,7 @@ app.use(cors(cors_option))
 app.use("/api",router)
 
 
-const port=process.env.PORT||8080
+const port=process.env.PORT||8000
 const server=app.listen(port,()=>{
     console.log(`Server running on port ${port}`)
 })
