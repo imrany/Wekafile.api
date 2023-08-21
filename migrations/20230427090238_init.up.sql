@@ -10,7 +10,20 @@ create table users(
 );
 create index user_idx on users (email);
 
-create table server(
+-- group table
+create table groups(
+    email varchar not null primary key,
+    username varchar not null,
+    password varchar not null,
+    photo varchar,
+    lastLogin varchar,
+    ipAddress varchar,
+    userPlatform varchar
+);
+create index group_idx on groups (email);
+
+-- sharedfiles table
+create table sharedfiles(
     filename varchar not null primary key,
     email varchar not null,
     username varchar not null,
@@ -20,7 +33,7 @@ create table server(
     type varchar,
     sharedTo int 
 );
-create index server_idx on server (email);
+create index sharedfiles_idx on sharedfiles (email);
 
 -- transaction
 -- create table mpesa_transactions(

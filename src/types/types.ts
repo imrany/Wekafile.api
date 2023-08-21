@@ -18,3 +18,18 @@ export interface Req{
         id:string
     }
 }
+
+export interface FileReq{
+    body:{
+        filename:string,
+        username:string,
+        uploadedAt:string,
+        size:string,
+        file:any,
+        type:string,
+        sharedTo:number
+    },
+    params:{
+        email:string
+    }
+}

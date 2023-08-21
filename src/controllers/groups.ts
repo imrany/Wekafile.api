@@ -39,7 +39,7 @@ export const verifyEmail=async(req:Req,res:any)=>{
     }
 }
 
-export const registerUser=async(req:Req,res:any)=>{
+export const registerGroup=async(req:Req,res:any)=>{
     try {
         const {username,email,password,lastLogin,userPlatform}=req.body;
         if (username&&email&&password) {
@@ -56,7 +56,7 @@ export const registerUser=async(req:Req,res:any)=>{
                             username:results.rows[0].username,
                             email:results.rows[0].email,
                             photo:results.rows[0].photo,
-                            token:generateUserToken(results.rows[0].id)
+                            token:generateGroupToken(results.rows[0].id)
                         }
                     })
                 }
@@ -69,7 +69,7 @@ export const registerUser=async(req:Req,res:any)=>{
     }
 }
 
-export const loginUser=async(req:Req,res:any)=>{
+export const loginGroup=async(req:Req,res:any)=>{
     try {
         const {email,password,lastLogin,userPlatform}=req.body;
         if(email&&password&&lastLogin&&userPlatform){
@@ -91,7 +91,7 @@ export const loginUser=async(req:Req,res:any)=>{
                                             username:results.rows[0].username,
                                             email:results.rows[0].email,
                                             photo:results.rows[0].photo,
-                                            token:generateUserToken(results.rows[0].id)
+                                            token:generateGroupToken(results.rows[0].id)
                                         }
                                     })
                                 }
@@ -112,12 +112,12 @@ export const loginUser=async(req:Req,res:any)=>{
     }
 }
 
-export const getUsers=async(req:Req,res:any)=>{
+export const getGroups=async(req:Req,res:any)=>{
     try {
-        pool.query('SELECT * FROM users', (error, results) => {
+        pool.query('SELECT * FROM groups', (error, results) => {
             if (error) {
                 console.log(error)
-                res.status(404).send({error:`Failed to get users.`})
+                res.status(404).send({error:`Failed to get groups.`})
             }else{
                 res.status(200).json(results.rows)
             }
@@ -127,7 +127,7 @@ export const getUsers=async(req:Req,res:any)=>{
     }
 }
 
-export const updateUser=async(req:Req,res:any)=>{
+export const updateGroup=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
         const { username, password, photo } = req.body
@@ -330,7 +330,7 @@ export const updateUser=async(req:Req,res:any)=>{
     }
 }
 
-export const getUserDetails=async(req:Req,res:any)=>{
+export const getGroupDetails=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
         pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
@@ -356,7 +356,7 @@ export const getUserDetails=async(req:Req,res:any)=>{
     }
 }
 
-export const protectUser=async(req:any,res:any,next:any)=>{
+export const protectGroup=async(req:any,res:any,next:any)=>{
     let token
     if(req.headers.authorization&&req.headers.authorization.startsWith('Bearer')){
         try{
@@ -372,7 +372,7 @@ export const protectUser=async(req:any,res:any,next:any)=>{
     }
 };
 
-export const deleteUser=async(req:Req,res:any)=>{
+export const deleteGroup=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
         pool.query('DELETE FROM users WHERE email = $1 RETURNING *', [email], (error, results) => {
@@ -390,7 +390,7 @@ export const deleteUser=async(req:Req,res:any)=>{
                     let details:MailDetails={
                         from:process.env.TRANSPORTER,
                         to:results.rows[0].email,
-                        subject:`Your Account Was Deleted`,
+                        subject:`Your Group Account Was Deleted`,
                         text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
                     }
                     mailTranporter.sendMail(details,(err:any)=>{
@@ -410,7 +410,7 @@ export const deleteUser=async(req:Req,res:any)=>{
     }
 }
 
-const generateUserToken=(id:string)=>{
+const generateGroupToken=(id:string)=>{
     return sign({id},`${process.env.JWT_SECRET}`,{
         expiresIn:'10d'
     })
