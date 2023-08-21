@@ -1,10 +1,10 @@
 import pool from "../pg";
 import { createTransport } from "nodemailer"
-import { MailDetails, Req } from "../types/types";
+import { MailDetails, ReqGroup } from "../types/types";
 import {genSalt, compare, hash} from "bcryptjs";
 import { verify, sign } from "jsonwebtoken"
 
-export const verifyGroup=async(req:Req,res:any)=>{
+export const verifyGroup=async(req:ReqGroup,res:any)=>{
     try {
         const email=req.body.email;
         const code=createCode()
@@ -39,13 +39,13 @@ export const verifyGroup=async(req:Req,res:any)=>{
     }
 }
 
-export const registerGroup=async(req:Req,res:any)=>{
+export const registerGroup=async(req:ReqGroup,res:any)=>{
     try {
-        const {username,email,password,lastLogin,userPlatform}=req.body;
-        if (username&&email&&password) {
+        const {groupname,grouptype,email,password,lastLogin,userPlatform}=req.body;
+        if (groupname&&grouptype&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            pool.query('INSERT INTO groups (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [`@${username}`, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
+            pool.query('INSERT INTO groups (groupname, email, password, lastLogin, userPlatform,grouptype) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [`@${groupname}`, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
                 if (error) {
                     res.status(408).send({error:`Account using ${email} already exist!`})
                 }else{
@@ -60,17 +60,17 @@ export const registerGroup=async(req:Req,res:any)=>{
                         from:process.env.TRANSPORTER,
                         to:results.rows[0].email,
                         subject:`Group Account Was Deleted`,
-                        text:`Welcome to Fileshare, Group ${results.rows[0].username},\n Your group email is ${results.rows[0].email}.\n Your Group password ${password}.\n\n You may share this details to you collegues.`
+                        text:`Welcome to Fileshare, Group ${results.rows[0].groupname},\n Your group email is ${results.rows[0].email}.\n Your Group password ${password}.\n\n You may share this details to you collegues.`
                     }
                     mailTranporter.sendMail(details,(err:any)=>{
                         if(err){
                             res.send({error:`Cannot sent email, try again!`});
                         } else{
                             res.status(201).send({
-                                msg:`Welcome ${results.rows[0].username}`,
+                                msg:`Welcome ${results.rows[0].groupname}`,
                                 data:{
                                     id:results.rows[0].id,
-                                    username:results.rows[0].username,
+                                    groupname:results.rows[0].groupname,
                                     email:results.rows[0].email,
                                     photo:results.rows[0].photo,
                                     token:generateGroupToken(results.rows[0].id)
@@ -88,7 +88,7 @@ export const registerGroup=async(req:Req,res:any)=>{
     }
 }
 
-export const loginGroup=async(req:Req,res:any)=>{
+export const loginGroup=async(req:ReqGroup,res:any)=>{
     try {
         const {email,password,lastLogin,userPlatform}=req.body;
         if(email&&password&&lastLogin&&userPlatform){
@@ -104,10 +104,10 @@ export const loginGroup=async(req:Req,res:any)=>{
                                     console.log(error)
                                 }else{
                                     res.status(201).send({
-                                        msg:`Welcome ${results.rows[0].username}`,
+                                        msg:`Welcome ${results.rows[0].groupname}`,
                                         data:{
                                             id:results.rows[0].id,
-                                            username:results.rows[0].username,
+                                            groupname:results.rows[0].groupname,
                                             email:results.rows[0].email,
                                             photo:results.rows[0].photo,
                                             token:generateGroupToken(results.rows[0].id)
@@ -131,7 +131,7 @@ export const loginGroup=async(req:Req,res:any)=>{
     }
 }
 
-export const getGroups=async(req:Req,res:any)=>{
+export const getGroups=async(req:ReqGroup,res:any)=>{
     try {
         pool.query('SELECT * FROM groups', (error, results) => {
             if (error) {
@@ -146,7 +146,7 @@ export const getGroups=async(req:Req,res:any)=>{
     }
 }
 
-export const getGroupDetails=async(req:Req,res:any)=>{
+export const getGroupDetails=async(req:ReqGroup,res:any)=>{
     try {
         const email = req.params.email
         pool.query('SELECT * FROM groups WHERE email = $1', [email], (error, results) => {
@@ -157,9 +157,10 @@ export const getGroupDetails=async(req:Req,res:any)=>{
                 if(results.rows[0]){
                     res.status(200).json({
                         data:{
-                            username:results.rows[0].username,
+                            groupname:results.rows[0].groupname,
                             email:results.rows[0].email,
-                            photo:results.rows[0].photo
+                            photo:results.rows[0].photo,
+                            grouptype:results.rows[0].grouptype
                         }
                     })
                 }else{
@@ -188,7 +189,7 @@ export const protectGroup=async(req:any,res:any,next:any)=>{
     }
 };
 
-export const deleteGroup=async(req:Req,res:any)=>{
+export const deleteGroup=async(req:ReqGroup,res:any)=>{
     try {
         const email = req.params.email
         pool.query('DELETE FROM groups WHERE email = $1 RETURNING *', [email], (error, results) => {
@@ -207,7 +208,7 @@ export const deleteGroup=async(req:Req,res:any)=>{
                         from:process.env.TRANSPORTER,
                         to:results.rows[0].email,
                         subject:`Your Group Account Was Deleted`,
-                        text:`Hello ${results.rows[0].username},\n Your Group was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+                        text:`Hello ${results.rows[0].groupname},\n Your Group was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
                     }
                     mailTranporter.sendMail(details,(err:any)=>{
                         if(err){

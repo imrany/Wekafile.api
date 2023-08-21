@@ -19,6 +19,22 @@ export interface Req{
     }
 }
 
+export interface ReqGroup{
+    body:{
+        groupname:string,
+        email:string,
+        password:string,
+        lastLogin:string,
+        userPlatform:string,
+        photo:string,
+        grouptype:string
+    },
+    params:{
+        email:string,
+        id:string
+    }
+}
+
 export interface FileReq{
     body:{
         filename:string,
