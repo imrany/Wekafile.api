@@ -6,7 +6,7 @@ import router from "./routes/api"
 config()
 
 const cors_option = {
-    origin:["http://localhost:8000","http://localhost:3000"],
+    origin:["http://localhost:8000","http://localhost:3000","http://localhost:3001","https://file-shareio.web.app"],
     methods: ["GET", "POST", "DELETE", "PATCH", "PUT"]
  }
 
