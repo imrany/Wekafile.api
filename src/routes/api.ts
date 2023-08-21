@@ -13,8 +13,8 @@ router.patch("/accounts/:email",protectUser,updateUser)
 router.delete("/accounts/:email",protectUser,deleteUser)
 
 //shared files route
-router.get("/sharedfiles/:email",protectUser,getSharedFiles)
-router.post("/sharedfiles/:email",protectUser,storeSharedFiles)
+router.get("/sharedfiles/:email",protectGroup,getSharedFiles)
+router.post("/sharedfiles/:email",protectGroup,storeSharedFiles)
 
 //group routes
 router.post("/verify/group",verifyGroup)

@@ -20,15 +20,15 @@ export async function getSharedFiles(req:FileReq,res:any){
 export async function storeSharedFiles(req:FileReq,res:any){
     try {
         const {email}=req.params
-        const {filename,username,uploadedAt,size,file,type,sharedTo}=req.body 
-        if(filename&&email&&username&&uploadedAt&&size&&file&&type&&sharedTo){
+        const {filename,groupname,uploadedAt,size,file,type,sharedTo}=req.body 
+        if(filename&&email&&groupname&&uploadedAt&&size&&file&&type&&sharedTo){
             pool.query('SELECT * FROM sharedfiles WHERE filename = $1',[filename],async (error,results)=>{
                 if(error){
                     console.log(error)
                     res.status(400).send({error:'Failed store file, this file already exist!!'})
                 }else{
                     if(results.rows[0]){
-                        pool.query('INSERT INTO sharedfiles (filename,username,uploadedAt,size,file,type,sharedTo,email) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [filename,username,uploadedAt,size,file,type,sharedTo,email], (error:any, results) => {
+                        pool.query('INSERT INTO sharedfiles (filename,groupname,uploadedAt,size,file,type,sharedTo,email) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [filename,groupname,uploadedAt,size,file,type,sharedTo,email], (error:any, results) => {
                             if (error) {
                                 res.status(408).send({error:`Failed store file, ${filename} already exist!!`})
                             }else{

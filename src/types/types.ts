@@ -38,7 +38,7 @@ export interface ReqGroup{
 export interface FileReq{
     body:{
         filename:string,
-        username:string,
+        groupname:string,
         uploadedAt:string,
         size:string,
         file:any,

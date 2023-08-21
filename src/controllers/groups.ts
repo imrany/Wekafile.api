@@ -42,10 +42,11 @@ export const verifyGroup=async(req:ReqGroup,res:any)=>{
 export const registerGroup=async(req:ReqGroup,res:any)=>{
     try {
         const {groupname,grouptype,email,password,lastLogin,userPlatform}=req.body;
+        console.log({groupname,grouptype,email,password,lastLogin,userPlatform})
         if (groupname&&grouptype&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            pool.query('INSERT INTO groups (groupname, email, password, lastLogin, userPlatform,grouptype) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [`@${groupname}`, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
+            pool.query('INSERT INTO groups (groupname,grouptype,email,password,lastLogin,userPlatform) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [`@${groupname}`,grouptype,email,hashedPassword,lastLogin,userPlatform], (error:any, results) => {
                 if (error) {
                     res.status(408).send({error:`Account using ${email} already exist!`})
                 }else{

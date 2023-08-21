@@ -27,7 +27,7 @@ create index group_idx on groups (email);
 create table sharedfiles(
     filename varchar not null primary key,
     email varchar not null,
-    username varchar not null,
+    groupname varchar not null,
     uploadedAt varchar,
     size varchar,
     file varchar,
