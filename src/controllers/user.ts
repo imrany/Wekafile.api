@@ -418,7 +418,7 @@ const generateUserToken=(id:string)=>{
 
 function createCode():string {
     let date=new Date()
-    let hr=date.getHours()<10?`0${date.getHours()}`:date.getHours()
+    let hr=date.getMinutes()<10?`0${date.getMinutes()}`:date.getMinutes()
     const code=`${hr}${date.getFullYear()}`
     return code
 }
