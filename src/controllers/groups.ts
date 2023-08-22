@@ -60,7 +60,7 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
                     let details:MailDetails={
                         from:process.env.TRANSPORTER,
                         to:results.rows[0].email,
-                        subject:`Group Account Was Deleted`,
+                        subject:`Welcome to Fileshare groups`,
                         text:`Welcome to Fileshare, Group ${results.rows[0].groupname},\n Your group email is ${results.rows[0].email}.\n Your Group password ${password}.\n\n You may share this details to you collegues.`
                     }
                     mailTranporter.sendMail(details,(err:any)=>{
