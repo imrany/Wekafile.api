@@ -1,6 +1,5 @@
 import express from "express"
 import { deleteUser, getUserDetails, getUsers, loginUser, protectUser, registerUser, updateUser, verifyEmail } from "../controllers/user"
-import { getSharedFiles } from "../controllers/sharedfiles"
 import { deleteGroup, getGroupDetails, getGroups, loginGroup, protectGroup, registerGroup, verifyGroup } from "../controllers/groups"
 const router=express.Router()
 
@@ -11,9 +10,6 @@ router.get("/accounts/:email",protectUser,getUserDetails)
 // router.get("/accounts",protectUser,getUsers)
 router.patch("/accounts/:email",protectUser,updateUser)
 router.delete("/accounts/:email",protectUser,deleteUser)
-
-//shared files route
-router.get("/sharedfiles/:email",protectGroup,getSharedFiles)
 
 //group routes
 router.post("/verify/group",verifyGroup)
