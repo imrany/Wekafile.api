@@ -132,20 +132,6 @@ export const loginGroup=async(req:ReqGroup,res:any)=>{
     }
 }
 
-export const getGroups=async(req:ReqGroup,res:any)=>{
-    try {
-        pool.query('SELECT * FROM groups', (error, results) => {
-            if (error) {
-                console.log(error)
-                res.status(404).send({error:`Failed to get groups.`})
-            }else{
-                res.status(200).json(results.rows)
-            }
-        })
-    } catch (error:any) {
-        res.status(500).send({error:error.message})
-    }
-}
 
 export const getGroupDetails=async(req:ReqGroup,res:any)=>{
     try {
