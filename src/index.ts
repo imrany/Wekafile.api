@@ -5,10 +5,19 @@ import socket from "./websocket"
 import router from "./routes/api"
 config()
 
-const cors_option = {
-    origin:["http://localhost:3000","https://file-shareio.web.app"],
-    methods: ["GET", "POST", "DELETE", "PATCH", "PUT"]
- }
+var allowlist = ["http://localhost:3000","https://file-shareio.web.app"]
+var cors_option = function (req:any, callback:any) {
+  var corsOptions;
+  if (allowlist.indexOf(req.header('Origin')) !== -1) {
+    corsOptions = { 
+        origin: true,
+        methods: ["GET", "POST", "DELETE", "UPDATE", "PATCH", "PUT"]
+    } // reflect (enable) the requested origin in the CORS response
+  } else {
+    corsOptions = { origin: false } // disable CORS for this request
+  }
+  callback(null, corsOptions) // callback expects two parameters: error and options
+}
 
 const app =express()
 // app.set('view engine','ejs');
