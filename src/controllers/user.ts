@@ -9,7 +9,7 @@ export const verifyEmail=async(req:Req,res:any)=>{
         const email=req.body.email;
         const code=createCode()
         pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
-            if (!results.rows) {
+            if (!results.rows[0]) {
                 let mailTranporter=createTransport({
                     service:'gmail',
                     auth:{
