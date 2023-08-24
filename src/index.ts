@@ -31,6 +31,7 @@ let io = require("socket.io")(server,{
         transports: ['websocket', 'polling'],
         credentials: true
     },
-    allowEIO3: true
+    allowEIO3: true,
+    maxHttpBufferSize:1e8
 });
 socket(io);
