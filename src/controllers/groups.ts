@@ -132,7 +132,6 @@ export const loginGroup=async(req:ReqGroup,res:any)=>{
     }
 }
 
-
 export const getGroupDetails=async(req:ReqGroup,res:any)=>{
     try {
         const email = req.params.email
@@ -214,6 +213,39 @@ export const deleteGroup=async(req:ReqGroup,res:any)=>{
     }
 }
 
+export const giveAccess=async(req:any,res:any)=>{
+    try {
+        const email = req.params.email
+        const {filename,allowedEmail}=req.body
+        pool.query('SELECT * FROM groups WHERE email = $1', [allowedEmail], (error, results) => {
+            if (results.rows) {
+                pool.query('SELECT * FROM sharedfiles WHERE email = $1 AND filename=$2',[email,filename],(error,result)=>{
+                    if(error){
+                        console.log({error:error})
+                    }else{
+                        if (result.rows[0]) {
+                            pool.query('UPDATE sharedfiles SET allowedEmails = ARRAY_APPEND(allowedEmails,$1) WHERE filename = $2',[allowedEmail,filename], (error, results) => {
+                                if(error){
+                                    console.log(error)
+                                    res.send({error:"Cannot give access!!"})
+                                }else{
+                                    res.send({msg:`Access created`})
+                                }
+                            })
+                        } else {
+                            res.status(404).send({error:`Not Found`})
+                        }
+                    }
+                })
+                
+            }else{
+                res.send({error:`Group using ${allowedEmail} does not exist!`})
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
 const generateGroupToken=(id:string)=>{
     return sign({id},`${process.env.JWT_GROUP}`,{
         expiresIn:'10d'
