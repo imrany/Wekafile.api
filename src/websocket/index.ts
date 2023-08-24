@@ -50,7 +50,7 @@ export default function socket(io:any){
         });
 
         socket.on("fetch_from_sharedfiles", (email:string, err:any) => {
-            pool.query('SELECT * FROM sharedfiles WHERE email = $1',[email], (error, results) => {
+            pool.query('SELECT * FROM sharedfiles WHERE email = $1 OR $1 = ANY(allowedEmails)',[email], (error, results) => {
                 if (error) {
                     console.log(error)
                     socket.emit("response",{error:`Failed fetch shared files.`})

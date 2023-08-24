@@ -17,9 +17,11 @@ create table groups(
     grouptype varchar not null,
     password varchar not null,
     photo varchar,
+    privacy boolean,
     lastLogin varchar,
     ipAddress varchar,
-    userPlatform varchar
+    userPlatform varchar,
+    memebers varchar[]
 );
 create index group_idx on groups (email);
 
@@ -27,6 +29,7 @@ create index group_idx on groups (email);
 create table sharedfiles(
     filename varchar not null primary key,
     email varchar not null,
+    allowedEmails varchar[],
     groupname varchar not null,
     uploadedAt varchar,
     size varchar,
