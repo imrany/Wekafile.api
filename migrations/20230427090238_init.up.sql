@@ -33,9 +33,9 @@ create table sharedfiles(
     groupname varchar not null,
     uploadedAt varchar,
     size varchar,
+    privacy boolean,
     file BYTEA,
-    type varchar,
-    sharedTo varchar
+    type varchar
 );
 create index sharedfiles_idx on sharedfiles (email);
 

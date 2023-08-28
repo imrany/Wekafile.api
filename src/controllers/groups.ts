@@ -41,12 +41,12 @@ export const verifyGroup=async(req:ReqGroup,res:any)=>{
 
 export const registerGroup=async(req:ReqGroup,res:any)=>{
     try {
-        const {groupname,grouptype,email,password,lastLogin,userPlatform}=req.body;
+        const {groupname,grouptype,email,password,lastLogin,userPlatform, privacy}=req.body;
         console.log({groupname,grouptype,email,password,lastLogin,userPlatform})
         if (groupname&&grouptype&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            pool.query('INSERT INTO groups (groupname,grouptype,email,password,lastLogin,userPlatform) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [`@${groupname}`,grouptype,email,hashedPassword,lastLogin,userPlatform], (error:any, results) => {
+            pool.query('INSERT INTO groups (groupname,grouptype,email,password,lastLogin,userPlatform,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [`@${groupname}`,grouptype,email,hashedPassword,lastLogin,userPlatform,privacy], (error:any, results) => {
                 if (error) {
                     res.status(408).send({error:`Account using ${email} already exist!`})
                 }else{
@@ -178,33 +178,42 @@ export const protectGroup=async(req:any,res:any,next:any)=>{
 export const deleteGroup=async(req:ReqGroup,res:any)=>{
     try {
         const email = req.params.email
-        pool.query('DELETE FROM groups WHERE email = $1 RETURNING *', [email], (error, results) => {
+
+        pool.query('DELETE FROM sharedfiles WHERE email = $1 RETURNING *', [email], (error, results) => {
             if (error) {
-                res.status(408).send({error:`Failed to delete group associated with the email ${email}`})
+                res.status(408).send({error:`Failed to delete shared files associated with the email ${email}`})
             }else{
-                if (results.rows[0]) {
-                    let mailTranporter=createTransport({
-                        service:'gmail',
-                        auth:{
-                            user:process.env.TRANSPORTER,
-                            pass:process.env.PASSWORD
+                if (results.rows) {
+                    pool.query('DELETE FROM groups WHERE email = $1 RETURNING *', [email], (error, results) => {
+                        if (error) {
+                            res.status(408).send({error:`Failed to delete group associated with the email ${email}`})
+                        }else{
+                            if (results.rows[0]) {
+                                let mailTranporter=createTransport({
+                                    service:'gmail',
+                                    auth:{
+                                        user:process.env.TRANSPORTER,
+                                        pass:process.env.PASSWORD
+                                    }
+                                });
+                                let details:MailDetails={
+                                    from:process.env.TRANSPORTER,
+                                    to:results.rows[0].email,
+                                    subject:`Your Group Account Was Deleted`,
+                                    text:`Hello ${results.rows[0].groupname},\n Your Group was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+                                }
+                                mailTranporter.sendMail(details,(err:any)=>{
+                                    if(err){
+                                        res.send({error:`Cannot sent email, try again!`});
+                                    } else{
+                                        res.status(200).send({msg:`Group associated with email ${results.rows[0].email} deteled successful`})
+                                    }
+                                })   
+                            } else {
+                                res.status(404).send({error:`Group associated with email ${email} does not exist!`})
+                            }
                         }
-                    });
-                    let details:MailDetails={
-                        from:process.env.TRANSPORTER,
-                        to:results.rows[0].email,
-                        subject:`Your Group Account Was Deleted`,
-                        text:`Hello ${results.rows[0].groupname},\n Your Group was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
-                    }
-                    mailTranporter.sendMail(details,(err:any)=>{
-                        if(err){
-                            res.send({error:`Cannot sent email, try again!`});
-                        } else{
-                            res.status(200).send({msg:`Group associated with email ${results.rows[0].email} deteled successful`})
-                        }
-                    })   
-                } else {
-                    res.status(404).send({error:`Group associated with email ${email} does not exist!`})
+                    })
                 }
             }
         })

@@ -27,7 +27,8 @@ export interface ReqGroup{
         lastLogin:string,
         userPlatform:string,
         photo:string,
-        grouptype:string
+        grouptype:string,
+        privacy:boolean
     },
     params:{
         email:string,
