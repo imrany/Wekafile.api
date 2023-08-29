@@ -14,7 +14,7 @@ create index user_idx on users (email);
 -- group table
 create table groups(
     email varchar not null primary key,
-    groupname varchar not null,
+    groupname varchar not null unique,
     grouptype varchar not null,
     password varchar not null,
     photo varchar,
