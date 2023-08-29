@@ -6,7 +6,8 @@ create table users(
     photo varchar,
     lastLogin varchar,
     ipAddress varchar,
-    userPlatform varchar
+    userPlatform varchar,
+    group_memberships varchar[]
 );
 create index user_idx on users (email);
 
@@ -21,7 +22,7 @@ create table groups(
     lastLogin varchar,
     ipAddress varchar,
     userPlatform varchar,
-    memebers varchar[]
+    members varchar[]
 );
 create index group_idx on groups (email);
 

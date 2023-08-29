@@ -25,7 +25,7 @@ export default function socket(io:any){
                     socket.emit("response",{error:'Failed store file, this file already exist!!'})
                 }else{
                     if(results.rows){
-                        pool.query('INSERT INTO sharedfiles (filename,groupname,uploadedAt,size,file,type,sharedTo,email) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [file_body.filename,file_body.groupname,file_body.uploadedAt,file_body.size,file_body.file,file_body.type,file_body.sharedTo,file_body.email], (error:any, results) => {
+                        pool.query('INSERT INTO sharedfiles (filename,groupname,uploadedAt,size,file,type,email,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [file_body.filename,file_body.groupname,file_body.uploadedAt,file_body.size,file_body.file,file_body.type,file_body.email,file_body.privacy], (error:any, results) => {
                             if (error) {
                                 socket.emit("response",{error:`Failed store file, ${file_body.filename} already exist!!`})
                             }else{
@@ -50,7 +50,7 @@ export default function socket(io:any){
         });
 
         socket.on("fetch_from_sharedfiles", (email:string, err:any) => {
-            pool.query('SELECT * FROM sharedfiles WHERE email = $1 OR $1 = ANY(allowedEmails)',[email], (error, results) => {
+            pool.query('SELECT * FROM sharedfiles WHERE email = $1 OR $1 = ANY(allowedEmails) OR privacy=false',[email], (error, results) => {
                 if (error) {
                     console.log(error)
                     socket.emit("response",{error:`Failed fetch shared files.`})

@@ -74,6 +74,7 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
                                     groupname:results.rows[0].groupname,
                                     email:results.rows[0].email,
                                     photo:results.rows[0].photo,
+                                    privacy:results.rows[0].privacy,
                                     token:generateGroupToken(results.rows[0].id)
                                 }
                             })
@@ -105,12 +106,13 @@ export const loginGroup=async(req:ReqGroup,res:any)=>{
                                     console.log(error)
                                 }else{
                                     res.status(201).send({
-                                        msg:`Welcome ${results.rows[0].groupname}`,
+                                        msg:`Welcome to ${results.rows[0].groupname}`,
                                         data:{
                                             id:results.rows[0].id,
                                             groupname:results.rows[0].groupname,
                                             email:results.rows[0].email,
                                             photo:results.rows[0].photo,
+                                            privacy:results.rows[0].privacy,
                                             token:generateGroupToken(results.rows[0].id)
                                         }
                                     })
@@ -146,6 +148,7 @@ export const getGroupDetails=async(req:ReqGroup,res:any)=>{
                             groupname:results.rows[0].groupname,
                             email:results.rows[0].email,
                             photo:results.rows[0].photo,
+                            privacy:results.rows[0].privacy,
                             grouptype:results.rows[0].grouptype
                         }
                     })
@@ -255,6 +258,40 @@ export const giveAccess=async(req:any,res:any)=>{
         res.status(500).send({error:error.message})
     }
 }
+
+export const changeGroupVisiblity=async(req:any,res:any)=>{
+    try {
+        const email = req.params.email
+        const privacy=req.body.privacy
+        pool.query('UPDATE groups SET privacy = $1 WHERE email = $2 RETURNING *',[privacy,email], (error, results) => {
+            if(error){
+                console.log(error)
+                res.send({error:`Group associated with email ${email} does not exist!`})
+            }else{
+                const resp=privacy===true?"private":"public"
+                let data={
+                    id:results.rows[0].id,
+                    groupname:results.rows[0].groupname,
+                    email:results.rows[0].email,
+                    photo:results.rows[0].photo,
+                    privacy:results.rows[0].privacy,
+                    token:generateGroupToken(results.rows[0].id)
+                }
+                pool.query('UPDATE sharedfiles SET privacy = $1 WHERE email = $2',[privacy,email], (error, results) => {
+                    if(error){
+                        console.log(error)
+                        res.send({error:`Cannot find shared files associated with group ${email}!`})
+                    }else{
+                        res.send({msg:`Group is now ${resp}`,data})
+                    }
+                })
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
+
 const generateGroupToken=(id:string)=>{
     return sign({id},`${process.env.JWT_GROUP}`,{
         expiresIn:'10d'

@@ -1,6 +1,6 @@
 import express from "express"
 import { deleteUser, getUserDetails, getUsers, loginUser, protectUser, registerUser, updateUser, verifyEmail } from "../controllers/user"
-import { deleteGroup, getGroupDetails, giveAccess, loginGroup, protectGroup, registerGroup, verifyGroup } from "../controllers/groups"
+import { changeGroupVisiblity, deleteGroup, getGroupDetails, giveAccess, loginGroup, protectGroup, registerGroup, verifyGroup } from "../controllers/groups"
 const router=express.Router()
 
 router.post("/verify",verifyEmail)
@@ -18,5 +18,6 @@ router.post("/auth/group/register",registerGroup)
 router.post("/auth/group/login",loginGroup)
 router.get("/groups/:email",protectGroup,getGroupDetails)
 router.delete("/groups/:email",protectGroup,deleteGroup)
+router.patch("/groups_visibility/:email",protectGroup,changeGroupVisiblity)
 
 export default router
