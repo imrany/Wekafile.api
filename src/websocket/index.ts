@@ -50,7 +50,7 @@ export default function socket(io:any){
         });
 
         socket.on("fetch_from_sharedfiles", (email:string, err:any) => {
-            pool.query('SELECT * FROM sharedfiles WHERE email = $1 OR $1 = ANY(allowedEmails) OR privacy=false',[email], (error, results) => {
+            pool.query('SELECT filename,email,file,uploadedAt,size,type FROM sharedfiles WHERE email = $1 OR $1 = ANY(allowedEmails) OR privacy=false',[email], (error, results) => {
                 if (error) {
                     console.log(error)
                     socket.emit("response",{error:`Failed fetch shared files.`})
@@ -65,12 +65,15 @@ export default function socket(io:any){
         });
 
         socket.on("fetch_from_sharedfiles_group", (groupname:string, err:any) => {
-            pool.query('SELECT * FROM sharedfiles WHERE groupname = $1 AND privacy=false',[groupname], (error, results) => {
+            pool.query('SELECT filename,email,file,uploadedAt,size,type FROM sharedfiles WHERE groupname = $1 AND privacy=false',[groupname], (error, results) => {
                 if (error) {
                     console.log(error)
                     socket.emit("response",{error:`Failed fetch shared files.`})
                 }else{
-                    socket.emit("response",{files:results.rows,count:results.rowCount})
+                    socket.emit("response",{
+                        files:results.rows,
+                        count:results.rowCount
+                    })
                 }
             })
 
@@ -83,9 +86,9 @@ export default function socket(io:any){
             pool.query('SELECT * FROM groups', (error, results) => {
                 if (error) {
                     console.log(error)
-                    socket.emit("response",{error:`Failed to get groups.`})
+                    socket.emit("grp_response",{error:`Failed to get groups.`})
                 }else{
-                    socket.emit("response",{groups:results.rows,count:results.rowCount})
+                    socket.emit("grp_response",{groups:results.rows,count:results.rowCount})
                 }
             })
 
