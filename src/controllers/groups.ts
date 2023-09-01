@@ -292,6 +292,23 @@ export const changeGroupVisiblity=async(req:any,res:any)=>{
     }
 }
 
+export const deleteSharedFile=async(req:any,res:any)=>{
+    try {
+        const filename=req.params.filename
+        pool.query('DELETE FROM sharedfiles WHERE filename = $1 RETURNING *',[filename],(error,results)=>{
+            if (error) {
+                res.status(408).send({error:`Failed to delete file ${filename}`})
+            }else{
+                if (results.rows[0]) {
+                    res.status(200).send({msg:`You've successfully deleted ${filename}`})
+                }
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
+
 const generateGroupToken=(id:string)=>{
     return sign({id},`${process.env.JWT_GROUP}`,{
         expiresIn:'10d'
