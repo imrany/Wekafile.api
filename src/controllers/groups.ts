@@ -297,10 +297,10 @@ export const deleteSharedFile=async(req:any,res:any)=>{
         const filename=req.params.filename
         pool.query('DELETE FROM sharedfiles WHERE filename = $1 RETURNING *',[filename],(error,results)=>{
             if (error) {
-                res.status(408).send({error:`Failed to delete file ${filename}`})
+                res.status(408).send({error:`Failed to delete file ${filename.slice(0,25)}...`})
             }else{
                 if (results.rows[0]) {
-                    res.status(200).send({msg:`You've successfully deleted ${filename.slice(0,20)}`})
+                    res.status(200).send({msg:`You've successfully deleted ${filename.slice(0,25)}...`})
                 }
             }
         })

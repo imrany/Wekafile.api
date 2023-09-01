@@ -22,15 +22,15 @@ export default function socket(io:any){
             pool.query('SELECT * FROM sharedfiles WHERE filename = $1',[file_body.filename],async (error,results)=>{
                 if(error){
                     console.log(error)
-                    socket.emit("response",{error:'Failed store file, this file already exist!!'})
+                    socket.emit("upload_response",{error:'Failed store file, this file already exist!!'})
                 }else{
                     if(results.rows){
                         pool.query('INSERT INTO sharedfiles (filename,groupname,uploadedAt,size,file,type,email,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [file_body.filename,file_body.groupname,file_body.uploadedAt,file_body.size,file_body.file,file_body.type,file_body.email,file_body.privacy], (error:any, results) => {
                             if (error) {
-                                socket.emit("response",{error:`Failed store file, ${file_body.filename} already exist!!`})
+                                socket.emit("upload_response",{error:`Failed store file, ${file_body.filename.slice(0,25)}... already exist!!`})
                             }else{
-                                socket.emit("response",{
-                                    msg:`${file_body.filename} was successfully added`,
+                                socket.emit("upload_response",{
+                                    msg:`${file_body.filename.slice(0,25)}... was successfully added`,
                                 })
                                 socket.broadcast.emit("notification",{
                                     msg:`A new file had been shared.`,
@@ -38,7 +38,7 @@ export default function socket(io:any){
                             }
                         })   
                     }else{
-                        socket.emit("response",{error:`Failed store file, ${file_body.filename} already exist!!`})
+                        socket.emit("upload_response",{error:`Failed store file, ${file_body.filename.slice(0,25)}... already exist!!`})
                     }
                 }
             })
