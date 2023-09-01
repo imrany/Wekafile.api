@@ -300,7 +300,7 @@ export const deleteSharedFile=async(req:any,res:any)=>{
                 res.status(408).send({error:`Failed to delete file ${filename}`})
             }else{
                 if (results.rows[0]) {
-                    res.status(200).send({msg:`You've successfully deleted ${filename}`})
+                    res.status(200).send({msg:`You've successfully deleted ${filename.slice(0,20)}`})
                 }
             }
         })
