@@ -309,6 +309,23 @@ export const deleteSharedFile=async(req:any,res:any)=>{
     }
 }
 
+export const viewSharedFile=async(req:any,res:any)=>{
+    try {
+        const filename=req.params.filename
+        pool.query('SELECT file FROM sharedfiles WHERE filename = $1',[filename],(error,results)=>{
+            if (error) {
+                res.status(408).send({error:`Failed to open file ${filename.slice(0,25)}...`})
+            }else{
+                if (results.rows[0]) {
+                    res.status(200).send({file:results.rows[0].file})
+                }
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
+
 const generateGroupToken=(id:string)=>{
     return sign({id},`${process.env.JWT_GROUP}`,{
         expiresIn:'10d'
