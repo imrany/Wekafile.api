@@ -3,7 +3,7 @@ import { createTransport } from "nodemailer"
 import { MailDetails, ReqGroup } from "../types/types";
 import {genSalt, compare, hash} from "bcryptjs";
 import { verify, sign } from "jsonwebtoken"
-import { unlinkSync, existsSync, mkdirSync } from "fs"
+import { unlinkSync, existsSync, mkdirSync, rmdir } from "fs"
 
 export const verifyGroup=async(req:ReqGroup,res:any)=>{
     try {
@@ -201,26 +201,34 @@ export const deleteGroup=async(req:ReqGroup,res:any)=>{
                             res.status(408).send({error:`Failed to delete group associated with the email ${email}`})
                         }else{
                             if (results.rows[0]) {
-                                let mailTranporter=createTransport({
-                                    service:'gmail',
-                                    auth:{
-                                        user:process.env.TRANSPORTER,
-                                        pass:process.env.PASSWORD
-                                    }
-                                });
-                                let details:MailDetails={
-                                    from:process.env.TRANSPORTER,
-                                    to:results.rows[0].email,
-                                    subject:`Your Group Account Was Deleted`,
-                                    text:`Hello ${results.rows[0].groupname},\n Your Group was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
-                                }
-                                mailTranporter.sendMail(details,(err:any)=>{
-                                    if(err){
-                                        res.send({error:`Cannot sent email, try again!`});
-                                    } else{
-                                        res.status(200).send({msg:`Group associated with email ${results.rows[0].email} deteled successful`})
-                                    }
-                                })   
+                                if (existsSync(`../../uploads/${email}`)) {
+                                    rmdir(`../../uploads/${email}`, (err) => {
+                                        if (err) {
+                                          console.error(err);
+                                          return;
+                                        }
+                                        let mailTranporter=createTransport({
+                                            service:'gmail',
+                                            auth:{
+                                                user:process.env.TRANSPORTER,
+                                                pass:process.env.PASSWORD
+                                            }
+                                        });
+                                        let details:MailDetails={
+                                            from:process.env.TRANSPORTER,
+                                            to:results.rows[0].email,
+                                            subject:`Your Group Account Was Deleted`,
+                                            text:`Hello ${results.rows[0].groupname},\n Your Group was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+                                        }
+                                        mailTranporter.sendMail(details,(err:any)=>{
+                                            if(err){
+                                                res.send({error:`Cannot sent email, try again!`});
+                                            } else{
+                                                res.status(200).send({msg:`Group associated with email ${results.rows[0].email} deteled successful`})
+                                            }
+                                        }) 
+                                    });
+                                }  
                             } else {
                                 res.status(404).send({error:`Group associated with email ${email} does not exist!`})
                             }
