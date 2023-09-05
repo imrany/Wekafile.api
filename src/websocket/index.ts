@@ -50,7 +50,7 @@ export default function socket(io:any){
         });
 
         socket.on("fetch_from_sharedfiles", (email:string, err:any) => {
-            pool.query('SELECT filename,email,file,uploadedAt,size,type FROM sharedfiles WHERE email = $1 OR $1 = ANY(allowedEmails) OR privacy=false',[email], (error, results) => {
+            pool.query('SELECT filename,email,file,uploadedAt,size,type,groupname FROM sharedfiles WHERE email = $1 OR $1 = ANY(allowedEmails) OR privacy=false',[email], (error, results) => {
                 if (error) {
                     console.log(error)
                     socket.emit("response",{error:`Failed fetch shared files.`})
@@ -65,7 +65,7 @@ export default function socket(io:any){
         });
 
         socket.on("fetch_from_sharedfiles_group", (groupname:string, err:any) => {
-            pool.query('SELECT filename,email,file,uploadedAt,size,type FROM sharedfiles WHERE groupname = $1 AND privacy=false',[groupname], (error, results) => {
+            pool.query('SELECT filename,email,file,uploadedAt,size,type,groupname FROM sharedfiles WHERE groupname = $1 AND privacy=false',[groupname], (error, results) => {
                 if (error) {
                     console.log(error)
                     socket.emit("response",{error:`Failed fetch shared files.`})

@@ -2,7 +2,7 @@ import express from "express"
 import { config } from "dotenv"
 import multer from "multer"
 import cors from "cors"
-import {readdir, mkdir, existsSync, renameSync } from "fs"
+import {rm, mkdir, existsSync, renameSync } from "fs"
 import socket from "./websocket"
 import router from "./routes/api"
 config()
@@ -40,25 +40,8 @@ app.post("/upload/:email",upload.single("file"),async(req:any,res:any)=>{
     try {
         console.log(req.file)
         renameSync(req.file.path, `${path}/${req.params.email}/${req.file.filename}`)
-        console.log("Successfully moved the file!")
+        console.log(`Successfull moved file ${req.file.filename} to ${path}/${req.params.email}/${req.file.filename}`)
         res.status(200).send({url:`${path}/${req.params.email}/${req.file.filename}`})
-    } catch (error:any) {
-        res.status(505).send({error:error.message})
-    }
-})
-
-app.get("/read_file",async(req:any,res:any)=>{
-    try {
-        readdir(path,"utf8",(err:any,files)=>{
-            if(err){
-                console.log(err)
-                mkdir(path,()=>{
-                    console.log(`uploads dir made`)
-                })
-            }else{
-                res.send(files)
-            }
-        })
     } catch (error:any) {
         res.status(505).send({error:error.message})
     }
@@ -67,12 +50,36 @@ app.get("/read_file",async(req:any,res:any)=>{
 export function createFolder(email:string){
     if (!existsSync(`./uploads/${email}`)) {
         mkdir(`./uploads/${email}`,()=>{
-            console.log("create folder")
+            console.log(`./uploads/${email} was created`)
         })
         return "create folder"
     }else{
-        return "Dont create"
+        return "Didnt create"
     }    
+}
+
+export function removeFolder(email:string){
+    if (existsSync(`./uploads/${email}`)) {
+        rm(`./uploads/${email}`, { recursive: true, force: true }, err => {
+            if (err) {
+              console.log(err);
+              return "Didnt remove"
+            }
+          
+            console.log(`./uploads/${email} was deleted!`);
+        });
+        return "remove folder"
+    }else{
+        return "Didnt remove"
+    }    
+}
+
+function createUploadFolder(){
+    if (!existsSync(path)) {
+        mkdir(path,()=>{
+            console.log(`${path} created`)
+        })
+    }   
 }
 
 const port=process.env.PORT||8080
@@ -91,3 +98,4 @@ let io = require("socket.io")(server,{
     maxHttpBufferSize:1e8
 });
 socket(io);
+createUploadFolder()

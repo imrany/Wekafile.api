@@ -4,7 +4,7 @@ import { MailDetails, ReqGroup } from "../types/types";
 import {genSalt, compare, hash} from "bcryptjs";
 import { verify, sign } from "jsonwebtoken"
 import { unlinkSync, existsSync, rmdir } from "fs"
-import { createFolder } from "..";
+import { createFolder, removeFolder } from "..";
 
 export const verifyGroup=async(req:ReqGroup,res:any)=>{
     try {
@@ -192,53 +192,49 @@ export const protectGroup=async(req:any,res:any,next:any)=>{
 export const deleteGroup=async(req:ReqGroup,res:any)=>{
     try {
         const email = req.params.email
-
-        pool.query('DELETE FROM sharedfiles WHERE email = $1 RETURNING *', [email], (error, results) => {
-            if (error) {
-                res.status(408).send({error:`Failed to delete shared files associated with the email ${email}`})
-            }else{
-                if (results.rows) {
-                    pool.query('DELETE FROM groups WHERE email = $1 RETURNING *', [email], (error, results) => {
-                        if (error) {
-                            res.status(408).send({error:`Failed to delete group associated with the email ${email}`})
-                        }else{
-                            if (results.rows[0]) {
-                                if (existsSync(`../../uploads/${email}`)) {
-                                    rmdir(`../../uploads/${email}`, (err) => {
-                                        if (err) {
-                                          console.error(err);
-                                          return;
+        removeFolder(email)
+        if (removeFolder(email)==="remove folder") {
+            pool.query('DELETE FROM sharedfiles WHERE email = $1 RETURNING *', [email], (error, results) => {
+                if (error) {
+                    res.status(408).send({error:`Failed to delete shared files associated with the email ${email}`})
+                }else{
+                    if (results.rows) {
+                        pool.query('DELETE FROM groups WHERE email = $1 RETURNING *', [email], (error, results) => {
+                            if (error) {
+                                res.status(408).send({error:`Failed to delete group associated with the email ${email}`})
+                            }else{
+                                if (results.rows[0]) {
+                                    let mailTranporter=createTransport({
+                                        service:'gmail',
+                                        auth:{
+                                            user:process.env.TRANSPORTER,
+                                            pass:process.env.PASSWORD
                                         }
-                                        let mailTranporter=createTransport({
-                                            service:'gmail',
-                                            auth:{
-                                                user:process.env.TRANSPORTER,
-                                                pass:process.env.PASSWORD
-                                            }
-                                        });
-                                        let details:MailDetails={
-                                            from:process.env.TRANSPORTER,
-                                            to:results.rows[0].email,
-                                            subject:`Your Group Account Was Deleted`,
-                                            text:`Hello ${results.rows[0].groupname},\n Your Group was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
-                                        }
-                                        mailTranporter.sendMail(details,(err:any)=>{
-                                            if(err){
-                                                res.send({error:`Cannot sent email, try again!`});
-                                            } else{
-                                                res.status(200).send({msg:`Group associated with email ${results.rows[0].email} deteled successful`})
-                                            }
-                                        }) 
                                     });
-                                }  
-                            } else {
-                                res.status(404).send({error:`Group associated with email ${email} does not exist!`})
+                                    let details:MailDetails={
+                                        from:process.env.TRANSPORTER,
+                                        to:results.rows[0].email,
+                                        subject:`Your Group Account Was Deleted`,
+                                        text:`Hello ${results.rows[0].groupname},\n Your Group was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+                                    }
+                                    mailTranporter.sendMail(details,(err:any)=>{
+                                        if(err){
+                                            res.send({error:`Cannot sent email, try again!`});
+                                        } else{
+                                            res.status(200).send({msg:`Group associated with email ${results.rows[0].email} deteled successful`})
+                                        }
+                                    }) 
+                                } else {
+                                    res.status(404).send({error:`Group associated with email ${email} does not exist!`})
+                                }
                             }
-                        }
-                    })
+                        })
+                    }
                 }
-            }
-        })
+            })
+        }else{
+            res.send({error:"Try again!!"})
+        }
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
