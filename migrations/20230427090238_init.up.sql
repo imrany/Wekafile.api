@@ -35,11 +35,11 @@ create table sharedfiles(
     uploadedAt varchar,
     size varchar,
     privacy boolean,
-    file BYTEA,
+    file varchar,
     type varchar
 );
 create index sharedfiles_idx on sharedfiles (email);
-
+--  BYTEA
 -- transaction
 -- create table mpesa_transactions(
 --     phoneNumber int not null,
