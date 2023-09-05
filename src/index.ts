@@ -24,9 +24,9 @@ const storage=multer.diskStorage({
 })
 const upload=multer({storage:storage})
 
-// app.set('view engine','ejs');
-app.use(express.static(`views`));
-app.use(express.static(`uploads`));
+app.set('view engine','ejs');
+// app.use(express.static(`views`));
+app.use('/uploads',express.static(`uploads`));
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
 app.use(cors(cors_option))
