@@ -3,6 +3,7 @@ import { createTransport } from "nodemailer"
 import { MailDetails, ReqGroup } from "../types/types";
 import {genSalt, compare, hash} from "bcryptjs";
 import { verify, sign } from "jsonwebtoken"
+import { unlinkSync, existsSync } from "fs"
 
 export const verifyGroup=async(req:ReqGroup,res:any)=>{
     try {
@@ -300,7 +301,17 @@ export const deleteSharedFile=async(req:any,res:any)=>{
                 res.status(408).send({error:`Failed to delete file ${filename.slice(0,25)}...`})
             }else{
                 if (results.rows[0]) {
-                    res.status(200).send({msg:`You've successfully deleted ${filename.slice(0,25)}...`})
+                    if (existsSync(results.rows[0].file)) {
+                        // The file exists, so you can proceed with deleting it
+                        try {
+                            unlinkSync(results.rows[0].file)
+                            res.status(200).send({msg:`You've successfully deleted ${filename.slice(0,25)}...`})
+                        } catch (err:any) {
+                            res.status(404).send({error:err.message})
+                        }
+                    } else {
+                        console.log('File not found')
+                    }
                 }
             }
         })
