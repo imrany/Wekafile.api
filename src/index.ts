@@ -33,10 +33,10 @@ app.use(cors(cors_option))
 app.use("/api",router)
 
 //routes
-app.post("/upload",upload.array("files"),async(req:any,res:any)=>{
+app.post("/upload",upload.single("file"),async(req:any,res:any)=>{
     try {
-        console.log(req.files)
-        res.status(200).send({msg:"File received"})
+        console.log(req.file)
+        res.status(200).send({url:req.file.path})
     } catch (error:any) {
         res.status(505).send({error:error.message})
     }
