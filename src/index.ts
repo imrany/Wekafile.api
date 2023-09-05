@@ -2,7 +2,7 @@ import express from "express"
 import { config } from "dotenv"
 import multer from "multer"
 import cors from "cors"
-import {readdir, mkdir, existsSync } from "fs"
+import {readdir, mkdir, existsSync, renameSync } from "fs"
 import socket from "./websocket"
 import router from "./routes/api"
 config()
@@ -13,8 +13,8 @@ const cors_option = {
 }
 
 const app =express()
-const path=`./uploads`
-const storage=multer.diskStorage({
+const path="./uploads"
+const store=multer.diskStorage({
     destination:(req:any,file:any,callback:any)=>{
         callback(null,path)
     },
@@ -22,7 +22,10 @@ const storage=multer.diskStorage({
         callback(null,file.originalname)
     }
 })
-const upload=multer({storage:storage})
+const upload=multer({
+    storage:store,
+    // limits: { fileSize: 1000000 }, which is equivalent to 1MB.
+})
 
 app.set('view engine','ejs');
 // app.use(express.static(`views`));
@@ -33,10 +36,12 @@ app.use(cors(cors_option))
 app.use("/api",router)
 
 //routes
-app.post("/upload",upload.single("file"),async(req:any,res:any)=>{
+app.post("/upload/:email",upload.single("file"),async(req:any,res:any)=>{
     try {
         console.log(req.file)
-        res.status(200).send({url:req.file.path})
+        renameSync(req.file.path, `${path}/${req.params.email}/${req.file.filename}`)
+        console.log("Successfully moved the file!")
+        res.status(200).send({url:`${path}/${req.params.email}/${req.file.filename}`})
     } catch (error:any) {
         res.status(505).send({error:error.message})
     }
