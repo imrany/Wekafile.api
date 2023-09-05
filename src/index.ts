@@ -2,7 +2,7 @@ import express from "express"
 import { config } from "dotenv"
 import multer from "multer"
 import cors from "cors"
-import {readdir, mkdir} from "fs"
+import {readdir, mkdir, existsSync } from "fs"
 import socket from "./websocket"
 import router from "./routes/api"
 config()
@@ -58,6 +58,17 @@ app.get("/read_file",async(req:any,res:any)=>{
         res.status(505).send({error:error.message})
     }
 })
+
+export function createFolder(email:string){
+    if (!existsSync(`./uploads/${email}`)) {
+        mkdir(`./uploads/${email}`,()=>{
+            console.log("create folder")
+        })
+        return "create folder"
+    }else{
+        return "Dont create"
+    }    
+}
 
 const port=process.env.PORT||8080
 const server=app.listen(port,()=>{
