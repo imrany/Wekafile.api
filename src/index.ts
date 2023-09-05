@@ -24,7 +24,7 @@ const store=multer.diskStorage({
 })
 const upload=multer({
     storage:store,
-    // limits: { fileSize: 1000000 }, which is equivalent to 1MB.
+    limits: { fileSize: 1000000 }, //which is equivalent to 1MB.
 })
 
 app.set('view engine','ejs');
