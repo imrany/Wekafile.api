@@ -47,48 +47,52 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
         if (groupname&&grouptype&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            pool.query('INSERT INTO groups (groupname,grouptype,email,password,lastLogin,userPlatform,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [`@${groupname}`,grouptype,email,hashedPassword,lastLogin,userPlatform,privacy], (error:any, results) => {
-                if (error) {
-                    res.status(408).send({error:`Account using ${email} already exist!`})
-                }else{
-                    try {
-                        createFolder(email)
-                        let mailTranporter=createTransport({
-                            service:'gmail',
-                            auth:{
-                                user:process.env.TRANSPORTER,
-                                pass:process.env.PASSWORD
+            createFolder(email)
+            if (createFolder(email)==="create folder") {
+                pool.query('INSERT INTO groups (groupname,grouptype,email,password,lastLogin,userPlatform,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [`@${groupname}`,grouptype,email,hashedPassword,lastLogin,userPlatform,privacy], (error:any, results) => {
+                    if (error) {
+                        res.status(408).send({error:`Account using ${email} already exist!`})
+                    }else{
+                        try {
+                            let mailTranporter=createTransport({
+                                service:'gmail',
+                                auth:{
+                                    user:process.env.TRANSPORTER,
+                                    pass:process.env.PASSWORD
+                                }
+                            }); 
+                            let details:MailDetails={
+                                from:process.env.TRANSPORTER,
+                                to:results.rows[0].email,
+                                subject:`Welcome to Fileshare groups`,
+                                text:`Welcome to Fileshare, Group ${results.rows[0].groupname},\n Your group email is ${results.rows[0].email}.\n Your Group password ${password}.\n\n You may share this details to you collegues.`
                             }
-                        }); 
-                        let details:MailDetails={
-                            from:process.env.TRANSPORTER,
-                            to:results.rows[0].email,
-                            subject:`Welcome to Fileshare groups`,
-                            text:`Welcome to Fileshare, Group ${results.rows[0].groupname},\n Your group email is ${results.rows[0].email}.\n Your Group password ${password}.\n\n You may share this details to you collegues.`
+                            mailTranporter.sendMail(details,(err:any)=>{
+                                if(err){
+                                    res.send({error:`Cannot sent email, try again!`});
+                                } else{
+                                    res.status(201).send({
+                                        msg:`Welcome ${results.rows[0].groupname}`,
+                                        data:{
+                                            id:results.rows[0].id,
+                                            groupname:results.rows[0].groupname,
+                                            email:results.rows[0].email,
+                                            photo:results.rows[0].photo,
+                                            privacy:results.rows[0].privacy,
+                                            token:generateGroupToken(results.rows[0].id)
+                                        }
+                                    })
+                                }
+                            })  
+                        } catch (err:any) {
+                            res.status(408).send({error:err.message})
+                            console.error(err);
                         }
-                        mailTranporter.sendMail(details,(err:any)=>{
-                            if(err){
-                                res.send({error:`Cannot sent email, try again!`});
-                            } else{
-                                res.status(201).send({
-                                    msg:`Welcome ${results.rows[0].groupname}`,
-                                    data:{
-                                        id:results.rows[0].id,
-                                        groupname:results.rows[0].groupname,
-                                        email:results.rows[0].email,
-                                        photo:results.rows[0].photo,
-                                        privacy:results.rows[0].privacy,
-                                        token:generateGroupToken(results.rows[0].id)
-                                    }
-                                })
-                            }
-                        })  
-                    } catch (err:any) {
-                        res.status(408).send({error:err.message})
-                        console.error(err);
                     }
-                }
-            })   
+                })   
+            } else {
+                res.send({error:"Try again!!"})
+            }
         } else {
             res.status(403).send({error:"Fill all the required fields!!"})
         }
