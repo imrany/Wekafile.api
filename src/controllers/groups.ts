@@ -3,7 +3,7 @@ import { createTransport } from "nodemailer"
 import { MailDetails, ReqGroup } from "../types/types";
 import {genSalt, compare, hash} from "bcryptjs";
 import { verify, sign } from "jsonwebtoken"
-import { unlinkSync, existsSync, mkdirSync, rmdir } from "fs"
+import { unlinkSync, existsSync, mkdirSync, rmdir, access, constants } from "fs"
 
 export const verifyGroup=async(req:ReqGroup,res:any)=>{
     try {
@@ -53,39 +53,47 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
                 }else{
                     try {
                         if (!existsSync(`../../uploads/${email}`)) {
-                          mkdirSync(`../../uploads/${email}`);
-                        }
-                        let mailTranporter=createTransport({
-                            service:'gmail',
-                            auth:{
-                                user:process.env.TRANSPORTER,
-                                pass:process.env.PASSWORD
+                            // Test both the read and write permissions
+                            access('/uploads', constants.R_OK
+                            | constants.W_OK, (err) => {
+                            if (err)
+                                console.error('No Read and Write access');
+                            else
+                                console.log('File can be read and written');
+                                mkdirSync(`/uploads`)
+                            });
+                            let mailTranporter=createTransport({
+                                service:'gmail',
+                                auth:{
+                                    user:process.env.TRANSPORTER,
+                                    pass:process.env.PASSWORD
+                                }
+                            }); 
+                            let details:MailDetails={
+                                from:process.env.TRANSPORTER,
+                                to:results.rows[0].email,
+                                subject:`Welcome to Fileshare groups`,
+                                text:`Welcome to Fileshare, Group ${results.rows[0].groupname},\n Your group email is ${results.rows[0].email}.\n Your Group password ${password}.\n\n You may share this details to you collegues.`
                             }
-                        }); 
-                        let details:MailDetails={
-                            from:process.env.TRANSPORTER,
-                            to:results.rows[0].email,
-                            subject:`Welcome to Fileshare groups`,
-                            text:`Welcome to Fileshare, Group ${results.rows[0].groupname},\n Your group email is ${results.rows[0].email}.\n Your Group password ${password}.\n\n You may share this details to you collegues.`
-                        }
-                        mailTranporter.sendMail(details,(err:any)=>{
-                            if(err){
-                                res.send({error:`Cannot sent email, try again!`});
-                            } else{
-                                res.status(201).send({
-                                    msg:`Welcome ${results.rows[0].groupname}`,
-                                    data:{
-                                        id:results.rows[0].id,
-                                        groupname:results.rows[0].groupname,
-                                        email:results.rows[0].email,
-                                        photo:results.rows[0].photo,
-                                        privacy:results.rows[0].privacy,
-                                        token:generateGroupToken(results.rows[0].id)
-                                    }
-                                })
-                            }
-                        })  
-                    } catch (err:any) {
+                            mailTranporter.sendMail(details,(err:any)=>{
+                                if(err){
+                                    res.send({error:`Cannot sent email, try again!`});
+                                } else{
+                                    res.status(201).send({
+                                        msg:`Welcome ${results.rows[0].groupname}`,
+                                        data:{
+                                            id:results.rows[0].id,
+                                            groupname:results.rows[0].groupname,
+                                            email:results.rows[0].email,
+                                            photo:results.rows[0].photo,
+                                            privacy:results.rows[0].privacy,
+                                            token:generateGroupToken(results.rows[0].id)
+                                        }
+                                    })
+                                }
+                            })  
+                        };
+                        } catch (err:any) {
                         res.status(408).send({error:err.message})
                         console.error(err);
                     }
