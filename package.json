@@ -1,7 +1,7 @@
 {
   "name": "file-share",
   "version": "1.0.0",
-  "description": "Share file between devices with easy",
+  "description": "Manage and share files.",
   "main": "./build/index.js",
   "scripts": {
     "start": "node ./build/index.js",
