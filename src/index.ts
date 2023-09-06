@@ -2,7 +2,7 @@ import express from "express"
 import { config } from "dotenv"
 import multer from "multer"
 import cors from "cors"
-import {rm, mkdir, existsSync, renameSync } from "fs"
+import {rm, mkdir, mkdirSync, existsSync, renameSync } from "fs"
 import socket from "./websocket"
 import router from "./routes/api"
 config()
@@ -47,15 +47,19 @@ app.post("/upload/:email",upload.single("file"),async(req:any,res:any)=>{
     }
 })
 
-export function createFolder(email:string){
-    if (!existsSync(`./uploads/${email}`)) {
-        mkdir(`./uploads/${email}`,()=>{
-            console.log(`./uploads/${email} was created`)
-        })
+export async function createFolder(email:string){
+    try {
+        console.log(existsSync(`./uploads/${email}`))
+        if (existsSync(`./uploads/${email}`)) {
+            return "Didnt create"
+        }    
+        mkdirSync(`./uploads/${email}`)
+        console.log(`./uploads/${email} was created`)
         return "create folder"
-    }else{
+    } catch (error:any) {
+        console.log(error.message)
         return "Didnt create"
-    }    
+    }
 }
 
 export function removeFolder(email:string){
