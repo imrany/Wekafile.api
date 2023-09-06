@@ -1,4 +1,4 @@
-all: build  
+all: clean build  
 # .DEFAULT_GOAL:=build
 # .PHONY: build copy 
 # variable
@@ -6,7 +6,7 @@ B= npm
 
 build: 
 	@echo 'building app...'
-	rm -rf ./build&&npx tsc
+	npx tsc
 
 clean:
 	@echo 'removing build dir..'
