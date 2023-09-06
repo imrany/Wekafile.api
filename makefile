@@ -1,4 +1,4 @@
-all: build copy 
+all: build  
 # .DEFAULT_GOAL:=build
 # .PHONY: build copy 
 # variable
