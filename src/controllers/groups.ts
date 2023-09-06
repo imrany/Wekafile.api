@@ -111,6 +111,7 @@ export const loginGroup=async(req:ReqGroup,res:any)=>{
                 }else{
                     if(results.rows[0]){
                         if (results.rows[0].email&&await compare(password,results.rows[0].password)) {
+                            await createFolder(results.rows[0].email)
                             pool.query('UPDATE groups SET lastLogin = $1, userPlatform = $2 WHERE email = $3 RETURNING *',[lastLogin,userPlatform,results.rows[0].email],(error,results)=>{
                                 if(error){
                                     console.log(error)
