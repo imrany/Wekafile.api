@@ -47,8 +47,7 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
         if (groupname&&grouptype&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            createFolder(email)
-            if (createFolder(email)==="create folder") {
+            if (await createFolder(email)==="create folder") {
                 pool.query('INSERT INTO groups (groupname,grouptype,email,password,lastLogin,userPlatform,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [`@${groupname}`,grouptype,email,hashedPassword,lastLogin,userPlatform,privacy], (error:any, results) => {
                     if (error) {
                         res.status(408).send({error:`Account using ${email} already exist!`})
