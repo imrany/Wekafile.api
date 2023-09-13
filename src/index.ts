@@ -27,12 +27,11 @@ const upload=multer({
     //limits: { fileSize: 1000000 }, //which is equivalent to 1MB.
 })
 
+app.use(cors(cors_option))
 app.set('view engine','ejs');
-// app.use(express.static(`views`));
-app.use('/uploads',express.static(`uploads`));
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
-app.use(cors(cors_option))
+app.use('/uploads',express.static(`uploads`));
 app.use("/api",router)
 
 //routes
