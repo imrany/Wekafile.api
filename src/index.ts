@@ -2,7 +2,7 @@ import express from "express"
 import { config } from "dotenv"
 import multer from "multer"
 import cors from "cors"
-import {rm, mkdir, mkdirSync, existsSync, renameSync } from "fs"
+import {rm, mkdir, existsSync, renameSync } from "fs"
 import socket from "./websocket"
 import router from "./routes/api"
 config()
