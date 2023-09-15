@@ -64,24 +64,6 @@ export default function socket(io:any){
             }
         });
 
-        socket.on("fetch_from_sharedfiles_group", (groupname:string, err:any) => {
-            pool.query('SELECT filename,email,file,uploadedAt,size,type,groupname FROM sharedfiles WHERE groupname = $1 AND privacy=false',[groupname], (error, results) => {
-                if (error) {
-                    console.log(error)
-                    socket.emit("response",{error:`Failed fetch shared files.`})
-                }else{
-                    socket.emit("response",{
-                        files:results.rows,
-                        count:results.rowCount
-                    })
-                }
-            })
-
-            if(err){
-                console.log(err)
-            }
-        });
-
         socket.on("fetch_groups", (email:string, err:any) => {
             pool.query('SELECT * FROM groups', (error, results) => {
                 if (error) {

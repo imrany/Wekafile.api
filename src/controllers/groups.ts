@@ -335,6 +335,49 @@ export const deleteSharedFile=async(req:any,res:any)=>{
     }
 }
 
+export const fetch_public_group_details=async(req:any,res:any)=>{
+    try {
+        const {groupname}=req.params
+        pool.query('SELECT email,grouptype,groupname,photo, privacy, members FROM groups WHERE groupname = $1 AND privacy=false',[groupname], (error, results) => {
+            if (error) {
+                console.log(error)
+                res.status(404).send({error:`Failed to select group ${groupname}!!`})
+            }else{
+                const details=results.rows[0]
+                pool.query('SELECT filename,email,file,uploadedAt,size,type,groupname FROM sharedfiles WHERE groupname = $1 AND privacy=false',[details.groupname], (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).send({error:`Failed to select group ${details.groupname}!!`})
+                    }else{
+                        res.send({
+                            details,
+                            files:results.rows,
+                            count:results.rowCount
+                        })
+                    }
+                })
+            }
+        })
+    } catch (error) {
+        
+    }
+}
+
+export const updateGroupPic=async(req:any,res:any)=>{
+    try{
+        const {email}=req.params
+        const {photo}=req.body
+        pool.query('UPDATE groups SET photo = $1 WHERE email = $2 RETURNING *',[photo,email],(error,results)=>{
+            if(error){
+                console.log(error)
+            }else{
+                res.status(201).send({msg:`You've update your group picture`})
+            }
+        })
+    }catch{
+
+    }
+}
 const generateGroupToken=(id:string)=>{
     return sign({id},`${process.env.JWT_GROUP}`,{
         expiresIn:'10d'
