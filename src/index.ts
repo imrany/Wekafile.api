@@ -35,41 +35,42 @@ app.use('/uploads',express.static(`uploads`));
 app.use("/api",router)
 
 //routes
-app.post("/upload/:email",upload.single("file"),async(req:any,res:any)=>{
+app.post("/upload/:accountType/:email",upload.single("file"),async(req:any,res:any)=>{
     try {
         console.log(req.file)
-        renameSync(req.file.path, `${path}/${req.params.email}/${req.file.filename}`)
-        console.log(`Successfull moved file ${req.file.filename} to ${path}/${req.params.email}/${req.file.filename}`)
-        res.status(200).send({url:`${path}/${req.params.email}/${req.file.filename}`})
+        renameSync(req.file.path, `${path}/${req.params.accountType}/${req.params.email}/${req.file.filename}`)
+        console.log(`Successfull moved file ${req.file.filename} to ${path}/${req.params.accountType}/${req.params.email}/${req.file.filename}`)
+        res.status(200).send({url:`${path}/${req.params.accountType}/${req.params.email}/${req.file.filename}`})
     } catch (error:any) {
         res.status(505).send({error:error.message})
     }
 })
 
-export async function createFolder(email:string){
+export async function createFolder(accountType:string,email:string){
     try {
-        console.log(existsSync(`./uploads/${email}`))
-        if (existsSync(`./uploads/${email}`)) {
+        console.log(existsSync(`./uploads/${accountType}/${email}`))
+        if (existsSync(`./uploads/${accountType}/${email}`)) {
             return "Didnt create"
         }    
-        mkdirSync(`./uploads/${email}`)
-        console.log(`./uploads/${email} was created`)
+        mkdir(`./uploads/${accountType}/${email}`, { recursive: true },()=>{
+            console.log(`./uploads/${accountType}/${email} was created`)
+        })
         return "create folder"
     } catch (error:any) {
-        console.log(error.message)
+        console.log({"error":error.message})
         return "Didnt create"
     }
 }
 
-export function removeFolder(email:string){
-    if (existsSync(`./uploads/${email}`)) {
-        rm(`./uploads/${email}`, { recursive: true, force: true }, err => {
+export function removeFolder(accountType:string,email:string){
+    if (existsSync(`./uploads/${accountType}/${email}`)) {
+        rm(`./uploads/${accountType}/${email}`, { recursive: true, force: true }, err => {
             if (err) {
               console.log(err);
               return "Didnt remove"
             }
           
-            console.log(`./uploads/${email} was deleted!`);
+            console.log(`./uploads/${accountType}/${email} was deleted!`);
         });
         return "remove folder"
     }else{

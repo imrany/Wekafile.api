@@ -47,7 +47,7 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
         if (groupname&&grouptype&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            if (await createFolder(email)==="create folder") {
+            if (await createFolder("groups",email)==="create folder") {
                 pool.query('INSERT INTO groups (groupname,grouptype,email,password,lastLogin,userPlatform,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [`@${groupname}`,grouptype,email,hashedPassword,lastLogin,userPlatform,privacy], (error:any, results) => {
                     if (error) {
                         res.status(408).send({error:`Account using ${email} already exist!`})
@@ -109,9 +109,10 @@ export const loginGroup=async(req:ReqGroup,res:any)=>{
                     console.log(error)
                     res.status(400).send({error:'Failed to sign in, try again!'})
                 }else{
+                    await createFolder("groups",results.rows[0].email)
                     if(results.rows[0]){
                         if (results.rows[0].email&&await compare(password,results.rows[0].password)) {
-                            await createFolder(results.rows[0].email)
+                            await createFolder("groups",results.rows[0].email)
                             pool.query('UPDATE groups SET lastLogin = $1, userPlatform = $2 WHERE email = $3 RETURNING *',[lastLogin,userPlatform,results.rows[0].email],(error,results)=>{
                                 if(error){
                                     console.log(error)
@@ -192,8 +193,8 @@ export const protectGroup=async(req:any,res:any,next:any)=>{
 export const deleteGroup=async(req:ReqGroup,res:any)=>{
     try {
         const email = req.params.email
-        removeFolder(email)
-        if (removeFolder(email)==="remove folder") {
+        removeFolder("groups",email)
+        if (removeFolder("groups",email)==="remove folder") {
             pool.query('DELETE FROM sharedfiles WHERE email = $1 RETURNING *', [email], (error, results) => {
                 if (error) {
                     res.status(408).send({error:`Failed to delete shared files associated with the email ${email}`})
