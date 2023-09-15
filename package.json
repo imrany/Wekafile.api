@@ -1,6 +1,6 @@
 {
-  "name": "file-share",
-  "version": "1.0.0",
+  "name": "wekafila-api",
+  "version": "1.0.1",
   "description": "Manage and share files.",
   "main": "./build/index.js",
   "scripts": {
