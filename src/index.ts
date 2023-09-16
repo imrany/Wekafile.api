@@ -46,6 +46,16 @@ app.post("/upload/:accountType/:email",upload.single("file"),async(req:any,res:a
     }
 })
 
+app.post("/upload/profile/:accountType/:email",upload.single("file"),async(req:any,res:any)=>{
+    try {
+        renameSync(req.file.path, `${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`)
+        console.log(`Successfull moved file ${req.file.filename} to ${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`)
+        res.status(200).send({url:`${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`})
+    } catch (error:any) {
+        res.status(505).send({error:error.message})
+    }
+})
+
 export async function createFolder(accountType:string,email:string){
     try {
         console.log(existsSync(`./uploads/${accountType}/${email}`))

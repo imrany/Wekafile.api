@@ -3,6 +3,8 @@ import { createTransport } from "nodemailer"
 import { MailDetails, Req } from "../types/types";
 import {genSalt, compare, hash} from "bcryptjs";
 import { verify, sign } from "jsonwebtoken"
+import { createFolder, removeFolder } from "..";
+import { unlinkSync, existsSync } from "fs"
 
 export const verifyEmail=async(req:Req,res:any)=>{
     try {
@@ -45,22 +47,28 @@ export const registerUser=async(req:Req,res:any)=>{
         if (username&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [`@${username}`, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
-                if (error) {
-                    res.status(408).send({error:`Account using ${email} already exist!`})
-                }else{
-                    res.status(201).send({
-                        msg:`Welcome ${results.rows[0].username}`,
-                        data:{
-                            id:results.rows[0].id,
-                            username:results.rows[0].username,
-                            email:results.rows[0].email,
-                            photo:results.rows[0].photo,
-                            token:generateUserToken(results.rows[0].id)
-                        }
-                    })
-                }
-            })   
+            if (await createFolder("users",email)==="create folder") {
+                pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [`@${username}`, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
+                    if (error) {
+                        res.status(408).send({error:`Account using ${email} already exist!`})
+                    }else{
+                        res.status(201).send({
+                            msg:`Welcome ${results.rows[0].username}`,
+                            data:{
+                                id:results.rows[0].id,
+                                username:results.rows[0].username,
+                                email:results.rows[0].email,
+                                photo:results.rows[0].photo,
+                                group_ownership:results.rows[0].group_ownership,
+                                token:generateUserToken(results.rows[0].id)
+                            }
+                        })
+                    }
+                })   
+            } else {
+                res.send({error:"Try again!!"})
+            }
+           
         } else {
             res.status(403).send({error:"Fill all the required fields!!"})
         }
@@ -78,6 +86,7 @@ export const loginUser=async(req:Req,res:any)=>{
                     console.log(error)
                     res.status(400).send({error:'Failed to sign in, try again!'})
                 }else{
+                    await createFolder("users",results.rows[0].email)
                     if(results.rows[0]){
                         if (results.rows[0].email&&await compare(password,results.rows[0].password)) {
                             pool.query('UPDATE users SET lastLogin = $1, userPlatform = $2 WHERE email = $3 RETURNING *',[lastLogin,userPlatform,results.rows[0].email],(error,results)=>{
@@ -91,6 +100,7 @@ export const loginUser=async(req:Req,res:any)=>{
                                             username:results.rows[0].username,
                                             email:results.rows[0].email,
                                             photo:results.rows[0].photo,
+                                            group_ownership:results.rows[0].group_ownership,
                                             token:generateUserToken(results.rows[0].id)
                                         }
                                     })
@@ -130,7 +140,7 @@ export const getUsers=async(req:Req,res:any)=>{
 export const updateUser=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
-        const { username, password, photo } = req.body
+        const { username, old_password,password, photo } = req.body
         if(username&&password&&photo){
             //update username, password and photo
             pool.query(
@@ -139,7 +149,7 @@ export const updateUser=async(req:Req,res:any)=>{
                 (error, results) => {
                     if (error) {
                         console.log(error)
-                        res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
+                        res.status(501).send({error:`Failed to update account username, password and photo`})
                     }else{
                         let mailTranporter=createTransport({
                             service:'gmail',
@@ -158,7 +168,7 @@ export const updateUser=async(req:Req,res:any)=>{
                             if(err){
                                 res.send({error:`Cannot sent email, try again!`});
                             } else{
-                                res.status(200).send({msg:`Account details updated successful`})
+                                res.status(200).send({msg:`Username, password and photo updated successful`})
                             }
                         })
                     }
@@ -171,7 +181,7 @@ export const updateUser=async(req:Req,res:any)=>{
                 (error, results) => {
                     if (error) {
                         console.log(error)
-                        res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
+                        res.status(501).send({error:`Failed to update account username and password`})
                     }else{
                         let mailTranporter=createTransport({
                             service:'gmail',
@@ -190,7 +200,7 @@ export const updateUser=async(req:Req,res:any)=>{
                             if(err){
                                 res.send({error:`Cannot sent email, try again!`});
                             } else{
-                                res.status(200).send({msg:`Account details updated successful`})
+                                res.status(200).send({msg:`Username and password updated successful`})
                             }
                         })
                     }
@@ -203,7 +213,7 @@ export const updateUser=async(req:Req,res:any)=>{
                 (error, results) => {
                     if (error) {
                         console.log(error)
-                        res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
+                        res.status(501).send({error:`Failed to update account username and photo`})
                     }else{
                         let mailTranporter=createTransport({
                             service:'gmail',
@@ -222,7 +232,7 @@ export const updateUser=async(req:Req,res:any)=>{
                             if(err){
                                 res.send({error:`Cannot sent email, try again!`});
                             } else{
-                                res.status(200).send({msg:`Account details updated successful`})
+                                res.status(200).send({msg:`Username and photo updated successful`})
                             }
                         })
                     }
@@ -235,7 +245,7 @@ export const updateUser=async(req:Req,res:any)=>{
                 (error, results) => {
                     if (error) {
                         console.log(error)
-                        res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
+                        res.status(501).send({error:`Failed to update account photo`})
                     }else{
                         let mailTranporter=createTransport({
                             service:'gmail',
@@ -254,42 +264,55 @@ export const updateUser=async(req:Req,res:any)=>{
                             if(err){
                                 res.send({error:`Cannot sent email, try again!`});
                             } else{
-                                res.status(200).send({msg:`Account details updated successful`})
+                                res.status(200).send({msg:`Photo updated`})
                             }
                         })
                     }
             })
         }else if(!username&&password&&!photo){
             //update password only
-            pool.query(
-                'UPDATE users SET password = $1 WHERE email = $2',
-                [password, email],
-                (error, results) => {
-                    if (error) {
-                        console.log(error)
-                        res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
-                    }else{
-                        let mailTranporter=createTransport({
-                            service:'gmail',
-                            auth:{
-                                user:process.env.TRANSPORTER,
-                                pass:process.env.PASSWORD
-                            }
-                        });
-                        let details:MailDetails={
-                            from:process.env.TRANSPORTER,
-                            to:email,
-                            subject:`Your Account details were updated`,
-                            text:`Hello, \nNew password is ${password},\nVisit https://file-shareio.web.app/`
-                        }
-                        mailTranporter.sendMail(details,(err:any)=>{
-                            if(err){
-                                res.send({error:`Cannot sent email, try again!`});
-                            } else{
-                                res.status(200).send({msg:`Account details updated successful`})
-                            }
+            pool.query('SELECT * FROM users WHERE email = $1',[email],async (error,results)=>{
+                if(error){
+                    console.log(error)
+                    res.status(404).send({error:'User not found!'})
+                }else{
+                    if (results.rows[0].email&&await compare(old_password,results.rows[0].password)) {
+                        const salt=await genSalt(10);
+                        const hashedPassword=await hash(password,salt);
+                        pool.query(
+                            'UPDATE users SET password = $1 WHERE email = $2',
+                            [hashedPassword, email],
+                            (error, results) => {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(501).send({error:`Failed to update password`})
+                                }else{
+                                    let mailTranporter=createTransport({
+                                        service:'gmail',
+                                        auth:{
+                                            user:process.env.TRANSPORTER,
+                                            pass:process.env.PASSWORD
+                                        }
+                                    });
+                                    let details:MailDetails={
+                                        from:process.env.TRANSPORTER,
+                                        to:email,
+                                        subject:`Your Account details were updated`,
+                                        text:`Hello, \nNew password is ${password},\nVisit https://file-shareio.web.app/`
+                                    }
+                                    mailTranporter.sendMail(details,(err:any)=>{
+                                        if(err){
+                                            res.send({error:`Cannot sent email, try again!`});
+                                        } else{
+                                            res.status(200).send({msg:`Password updated`})
+                                        }
+                                    })
+                                }
                         })
+                    }else{
+                        res.status(401).send({error:"you've entered false credential!"})
                     }
+                }
             })
         }else if(username&&!password&&!photo){
             //update username only
@@ -343,7 +366,8 @@ export const getUserDetails=async(req:Req,res:any)=>{
                         data:{
                             username:results.rows[0].username,
                             email:results.rows[0].email,
-                            photo:results.rows[0].photo
+                            photo:results.rows[0].photo,
+                            group_ownership:results.rows[0].group_ownership
                         }
                     })
                 }else{
@@ -375,10 +399,10 @@ export const protectUser=async(req:any,res:any,next:any)=>{
 export const getMyUploads=async(req:any,res:any)=>{
     try {
         const email=req.params.email
-        pool.query('SELECT filename,email,file,uploadedAt,size,type,groupname FROM sharedfiles WHERE email = $1',[email], (error, results) => {
+        pool.query('SELECT filename,email,file,uploadedAt,size,type,username FROM user_uploads WHERE email = $1',[email], (error, results) => {
             if (error) {
                 console.log(error)
-                res.status(404).send({error:`Failed fetch shared files.`})
+                res.status(404).send({error:`Failed uploads.`})
             }else{
                 res.send({files:results.rows,count:results.rowCount})
             }
@@ -391,15 +415,15 @@ export const getMyUploads=async(req:any,res:any)=>{
 export const postMyUploads=async(req:any,res:any)=>{
     try {
         const file_body=req.body.file_body
-        pool.query('SELECT * FROM sharedfiles WHERE filename = $1',[file_body.filename],async (error,results)=>{
+        pool.query('SELECT * FROM user_uploads WHERE filename = $1',[file_body.filename],async (error,results)=>{
             if(error){
                 console.log(error)
                 res.status(400).send({error:'Failed upload file'})
             }else{
                 if(results.rows){
-                    pool.query('INSERT INTO sharedfiles (filename,groupname,uploadedAt,size,file,type,email,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [file_body.filename,file_body.groupname,file_body.uploadedAt,file_body.size,file_body.file,file_body.type,file_body.email,file_body.privacy], (error:any, results) => {
+                    pool.query('INSERT INTO user_uploads (filename,username,uploadedAt,size,file,type,email) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [file_body.filename,file_body.username,file_body.uploadedAt,file_body.size,file_body.file,file_body.type,file_body.email], (error:any, results) => {
                         if (error) {
-                            res.status(400).send({error:`Failed upload file, ${file_body.filename.slice(0,25)}... already exist!!`})
+                            res.status(400).send({error:`Failed to upload file, ${file_body.filename.slice(0,25)}... already exist!!`})
                         }else{
                             res.send({
                                 msg:`${file_body.filename.slice(0,25)}... was successfully added`,
@@ -419,33 +443,108 @@ export const postMyUploads=async(req:any,res:any)=>{
 export const deleteUser=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
-        pool.query('DELETE FROM users WHERE email = $1 RETURNING *', [email], (error, results) => {
+        removeFolder("users",email)
+        if (removeFolder("users",email)==="remove folder") {
+            pool.query('DELETE group_uploads,user_uploads FROM group_uploads INNER JOIN user_uploads ON group_uploads.email=user_uploads.email WHERE group_uploads.email = $1 RETURNING *', [email], (error, results) => {
+                if (error) {
+                    res.status(408).send({error:`Failed to delete uploads associated with the email ${email}`})
+                }else{
+                    if (results.rows) {
+                        pool.query('DELETE users,groups FROM users INNER JOIN groups ON users.email=groups.email WHERE users.email = $1 RETURNING *', [email], (error, results) => {
+                            if (error) {
+                                res.status(408).send({error:`Failed to delete account associated with the email ${email}`})
+                            }else{
+                                if (results.rows[0]) {
+                                    let mailTranporter=createTransport({
+                                        service:'gmail',
+                                        auth:{
+                                            user:process.env.TRANSPORTER,
+                                            pass:process.env.PASSWORD
+                                        }
+                                    });
+                                    let details:MailDetails={
+                                        from:process.env.TRANSPORTER,
+                                        to:results.rows[0].email,
+                                        subject:`Your Account Was Deleted`,
+                                        text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://wekafile.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+                                    }
+                                    mailTranporter.sendMail(details,(err:any)=>{
+                                        if(err){
+                                            res.send({error:`Cannot sent email, try again!`});
+                                        } else{
+                                            res.status(200).send({msg:`Account associated with email ${results.rows[0].email} deteled successful`})
+                                        }
+                                    })   
+                                } else {
+                                    res.status(404).send({error:`Account associated with email ${email} does not exist!`})
+                                }
+                            }
+                        })
+                    }
+                }
+            })
+        }else{
+            res.send({error:"Try again!!"})
+        }
+        
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
+
+export const giveAccessToUpload=async(req:any,res:any)=>{
+    try {
+        const email = req.params.email
+        const {filename,allowedEmail}=req.body
+        pool.query('SELECT * FROM groups WHERE email = $1', [allowedEmail], (error, results) => {
+            if (results.rows) {
+                pool.query('SELECT * FROM user_uploads WHERE email = $1 AND filename=$2',[email,filename],(error,result)=>{
+                    if(error){
+                        console.log({error:error})
+                    }else{
+                        if (result.rows[0]) {
+                            pool.query('UPDATE user_uploads SET allowedEmails = ARRAY_APPEND(allowedEmails,$1) WHERE filename = $2',[allowedEmail,filename], (error, results) => {
+                                if(error){
+                                    console.log(error)
+                                    res.send({error:"Cannot give access!!"})
+                                }else{
+                                    res.send({msg:`Access created`})
+                                }
+                            })
+                        } else {
+                            res.status(404).send({error:`Not Found`})
+                        }
+                    }
+                })
+                
+            }else{
+                res.send({error:`Group using ${allowedEmail} does not exist!`})
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
+
+export const deleteUploadFile=async(req:any,res:any)=>{
+    try {
+        const filename=req.params.filename
+        pool.query('DELETE FROM user_uploads WHERE filename = $1 RETURNING *',[filename],(error,results)=>{
             if (error) {
-                res.status(408).send({error:`Failed to delete account associated with the email ${email}`})
+                res.status(408).send({error:`Failed to delete file ${filename.slice(0,25)}...`})
             }else{
                 if (results.rows[0]) {
-                    let mailTranporter=createTransport({
-                        service:'gmail',
-                        auth:{
-                            user:process.env.TRANSPORTER,
-                            pass:process.env.PASSWORD
+                    if (existsSync(results.rows[0].file)) {
+                        // The file exists, so you can proceed with deleting it
+                        try {
+                            unlinkSync(results.rows[0].file)
+                            res.status(200).send({msg:`You've successfully deleted ${filename.slice(0,25)}...`})
+                        } catch (err:any) {
+                            res.status(404).send({error:err.message})
                         }
-                    });
-                    let details:MailDetails={
-                        from:process.env.TRANSPORTER,
-                        to:results.rows[0].email,
-                        subject:`Your Account Was Deleted`,
-                        text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://file-shareio.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+                    } else {
+                        console.log('File not found')
                     }
-                    mailTranporter.sendMail(details,(err:any)=>{
-                        if(err){
-                            res.send({error:`Cannot sent email, try again!`});
-                        } else{
-                            res.status(200).send({msg:`Account associated with email ${results.rows[0].email} deteled successful`})
-                        }
-                    })   
-                } else {
-                    res.status(404).send({error:`Account associated with email ${email} does not exist!`})
                 }
             }
         })

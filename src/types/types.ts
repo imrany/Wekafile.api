@@ -8,6 +8,7 @@ export interface Req{
     body:{
         username:string,
         email:string,
+        old_password:string,
         password:string,
         lastLogin:string,
         userPlatform:string,

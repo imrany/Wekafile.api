@@ -7,16 +7,28 @@ create table users(
     lastLogin varchar,
     ipAddress varchar,
     userPlatform varchar,
-    group_memberships varchar[]
+    group_ownership varchar
 );
 create index user_idx on users (email);
+
+-- user_uploads table
+create table user_uploads(
+    filename varchar not null primary key,
+    email varchar not null,
+    allowedEmails varchar[],
+    username varchar not null,
+    uploadedAt varchar,
+    size varchar,
+    file varchar,
+    type varchar
+);
+create index user_uploads_idx on user_uploads (email);
 
 -- group table
 create table groups(
     email varchar not null primary key,
     groupname varchar not null unique,
     grouptype varchar not null,
-    password varchar not null,
     photo varchar,
     privacy boolean,
     lastLogin varchar,
@@ -26,8 +38,8 @@ create table groups(
 );
 create index group_idx on groups (email);
 
--- sharedfiles table
-create table sharedfiles(
+-- group_uploads table
+create table group_uploads(
     filename varchar not null primary key,
     email varchar not null,
     allowedEmails varchar[],
@@ -38,7 +50,7 @@ create table sharedfiles(
     file varchar,
     type varchar
 );
-create index sharedfiles_idx on sharedfiles (email);
+create index group_uploads_idx on group_uploads (email);
 --  BYTEA
 -- transaction
 -- create table mpesa_transactions(
