@@ -372,6 +372,50 @@ export const protectUser=async(req:any,res:any,next:any)=>{
     }
 };
 
+export const getMyUploads=async(req:any,res:any)=>{
+    try {
+        const email=req.params.email
+        pool.query('SELECT filename,email,file,uploadedAt,size,type,groupname FROM sharedfiles WHERE email = $1',[email], (error, results) => {
+            if (error) {
+                console.log(error)
+                res.status(404).send({error:`Failed fetch shared files.`})
+            }else{
+                res.send({files:results.rows,count:results.rowCount})
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
+
+export const postMyUploads=async(req:any,res:any)=>{
+    try {
+        const file_body=req.body.file_body
+        pool.query('SELECT * FROM sharedfiles WHERE filename = $1',[file_body.filename],async (error,results)=>{
+            if(error){
+                console.log(error)
+                res.status(400).send({error:'Failed upload file'})
+            }else{
+                if(results.rows){
+                    pool.query('INSERT INTO sharedfiles (filename,groupname,uploadedAt,size,file,type,email,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [file_body.filename,file_body.groupname,file_body.uploadedAt,file_body.size,file_body.file,file_body.type,file_body.email,file_body.privacy], (error:any, results) => {
+                        if (error) {
+                            res.status(400).send({error:`Failed upload file, ${file_body.filename.slice(0,25)}... already exist!!`})
+                        }else{
+                            res.send({
+                                msg:`${file_body.filename.slice(0,25)}... was successfully added`,
+                            })
+                        }
+                    })   
+                }else{
+                    res.status(400).send({error:`Failed store file, ${file_body.filename.slice(0,25)}... already exist!!`})
+                }
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
+
 export const deleteUser=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
