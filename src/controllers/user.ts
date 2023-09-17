@@ -23,7 +23,7 @@ export const verifyEmail=async(req:Req,res:any)=>{
                     from:process.env.TRANSPORTER,
                     to:email,
                     subject:`Verification Code`,
-                    text:`Your Fileshare One-Time Password (OTP) is \n${code}`
+                    text:`Your Wekafile One-Time Password (OTP) is \n${code}`
                 }
                 mailTranporter.sendMail(details,(err:any)=>{
                     if(err){
@@ -162,7 +162,7 @@ export const updateUser=async(req:Req,res:any)=>{
                             from:process.env.TRANSPORTER,
                             to:email,
                             subject:`Your Account details were updated`,
-                            text:`Hello ${username},\n Your new account username is ${username}\n\nNew password is ${password},\nVisit https://file-shareio.web.app/`
+                            text:`Hello ${username},\n Your new account username is ${username}\n\nNew password is ${password},\nVisit https://wekafile.web.app/`
                         }
                         mailTranporter.sendMail(details,(err:any)=>{
                             if(err){
@@ -194,7 +194,7 @@ export const updateUser=async(req:Req,res:any)=>{
                             from:process.env.TRANSPORTER,
                             to:email,
                             subject:`Your Account details were updated`,
-                            text:`Hello ${username},\n Your new account username is ${username}\n\nNew password is ${password},\nVisit https://file-shareio.web.app/`
+                            text:`Hello ${username},\n Your new account username is ${username}\n\nNew password is ${password},\nVisit https://wekafile.web.app/`
                         }
                         mailTranporter.sendMail(details,(err:any)=>{
                             if(err){
@@ -226,7 +226,7 @@ export const updateUser=async(req:Req,res:any)=>{
                             from:process.env.TRANSPORTER,
                             to:email,
                             subject:`Your Account details were updated`,
-                            text:`Hello ${username},\n Your new account username is ${username}\n\n,Visit https://file-shareio.web.app/`
+                            text:`Hello ${username},\n Your new account username is ${username}\n\n,Visit https://wekafile.web.app/`
                         }
                         mailTranporter.sendMail(details,(err:any)=>{
                             if(err){
@@ -258,7 +258,7 @@ export const updateUser=async(req:Req,res:any)=>{
                             from:process.env.TRANSPORTER,
                             to:email,
                             subject:`Your Account details were updated`,
-                            text:`Hello ,\n Your account user profile has been updated.\n\nVisit https://file-shareio.web.app/`
+                            text:`Hello ,\n Your account user profile has been updated.\n\nVisit https://wekafile.web.app/`
                         }
                         mailTranporter.sendMail(details,(err:any)=>{
                             if(err){
@@ -298,7 +298,7 @@ export const updateUser=async(req:Req,res:any)=>{
                                         from:process.env.TRANSPORTER,
                                         to:email,
                                         subject:`Your Account details were updated`,
-                                        text:`Hello, \nNew password is ${password},\nVisit https://file-shareio.web.app/`
+                                        text:`Hello, \nNew password is ${password},\nVisit https://wekafile.web.app/`
                                     }
                                     mailTranporter.sendMail(details,(err:any)=>{
                                         if(err){
@@ -335,7 +335,7 @@ export const updateUser=async(req:Req,res:any)=>{
                             from:process.env.TRANSPORTER,
                             to:email,
                             subject:`Your Account details were updated`,
-                            text:`Hello, \nYour new account username is ${username},\nVisit https://file-shareio.web.app/`
+                            text:`Hello ${username}, \nYour new account username is ${username},\nVisit https://wekafile.web.app/`
                         }
                         mailTranporter.sendMail(details,(err:any)=>{
                             if(err){
