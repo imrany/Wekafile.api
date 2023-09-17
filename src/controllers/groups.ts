@@ -128,8 +128,7 @@ export const protectGroup=async(req:any,res:any,next:any)=>{
 export const deleteGroup=async(req:ReqGroup,res:any)=>{
     try {
         const email = req.params.email
-        removeFolder("groups",email)
-        if (removeFolder("groups",email)==="remove folder") {
+        if (await removeFolder("groups",email)==="remove folder") {
             pool.query('DELETE FROM group_uploads WHERE email = $1 RETURNING *', [email], (error, results) => {
                 if (error) {
                     res.status(408).send({error:`Failed to delete shared files associated with the email ${email}`})

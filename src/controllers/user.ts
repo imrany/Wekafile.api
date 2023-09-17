@@ -86,8 +86,8 @@ export const loginUser=async(req:Req,res:any)=>{
                     console.log(error)
                     res.status(400).send({error:'Failed to sign in, try again!'})
                 }else{
-                    await createFolder("users",results.rows[0].email)
                     if(results.rows[0]){
+                        await createFolder("users",results.rows[0].email)
                         if (results.rows[0].email&&await compare(password,results.rows[0].password)) {
                             pool.query('UPDATE users SET lastLogin = $1, userPlatform = $2 WHERE email = $3 RETURNING *',[lastLogin,userPlatform,results.rows[0].email],(error,results)=>{
                                 if(error){
@@ -443,14 +443,17 @@ export const postMyUploads=async(req:any,res:any)=>{
 export const deleteUser=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
-        removeFolder("users",email)
-        if (removeFolder("users",email)==="remove folder") {
-            pool.query('DELETE group_uploads,user_uploads FROM group_uploads INNER JOIN user_uploads ON group_uploads.email=user_uploads.email WHERE group_uploads.email = $1 RETURNING *', [email], (error, results) => {
+        await removeFolder("users",email)
+        if (await removeFolder("users",email)==="remove folder") {
+            pool.query(`
+            DELETE FROM user_uploads WHERE email=$1 RETURNING *
+            `, [email], (error, results) => {
                 if (error) {
                     res.status(408).send({error:`Failed to delete uploads associated with the email ${email}`})
+                    console.log(error)
                 }else{
                     if (results.rows) {
-                        pool.query('DELETE users,groups FROM users INNER JOIN groups ON users.email=groups.email WHERE users.email = $1 RETURNING *', [email], (error, results) => {
+                        pool.query('DELETE FROM users WHERE email = $1 RETURNING *', [email], (error, results) => {
                             if (error) {
                                 res.status(408).send({error:`Failed to delete account associated with the email ${email}`})
                             }else{

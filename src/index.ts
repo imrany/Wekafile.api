@@ -2,7 +2,7 @@ import express from "express"
 import { config } from "dotenv"
 import multer from "multer"
 import cors from "cors"
-import {rm, mkdir, existsSync, renameSync } from "fs"
+import {rmSync, mkdir, existsSync, renameSync } from "fs"
 import socket from "./websocket"
 import router from "./routes/api"
 config()
@@ -37,7 +37,6 @@ app.use("/api",router)
 //routes
 app.post("/upload/:accountType/:email",upload.single("file"),async(req:any,res:any)=>{
     try {
-        console.log(req.file)
         renameSync(req.file.path, `${path}/${req.params.accountType}/${req.params.email}/${req.file.filename}`)
         console.log(`Successfull moved file ${req.file.filename} to ${path}/${req.params.accountType}/${req.params.email}/${req.file.filename}`)
         res.status(200).send({url:`${path}/${req.params.accountType}/${req.params.email}/${req.file.filename}`})
@@ -58,7 +57,6 @@ app.post("/upload/profile/:accountType/:email",upload.single("file"),async(req:a
 
 export async function createFolder(accountType:string,email:string){
     try {
-        console.log(existsSync(`./uploads/${accountType}/${email}`))
         if (existsSync(`./uploads/${accountType}/${email}`)) {
             return "Didnt create"
         }    
@@ -72,20 +70,19 @@ export async function createFolder(accountType:string,email:string){
     }
 }
 
-export function removeFolder(accountType:string,email:string){
-    if (existsSync(`./uploads/${accountType}/${email}`)) {
-        rm(`./uploads/${accountType}/${email}`, { recursive: true, force: true }, err => {
-            if (err) {
-              console.log(err);
-              return "Didnt remove"
-            }
-          
-            console.log(`./uploads/${accountType}/${email} was deleted!`);
-        });
+export async function removeFolder(accountType:string,email:string){
+    try {
+        console.log(existsSync(`./uploads/${accountType}/${email}`))
+        // if (!existsSync(`./uploads/${accountType}/${email}`)) {
+        //     return "Didnt remove"
+        // }
+        rmSync(`./uploads/${accountType}/${email}`, { recursive: true, force: true })
+        console.log(`./uploads/${accountType}/${email} was deleted!`);
         return "remove folder"
-    }else{
+    } catch (error:any) {
+        console.log({"error":error.message})
         return "Didnt remove"
-    }    
+    }
 }
 
 function createUploadFolder(){
