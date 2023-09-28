@@ -47,28 +47,23 @@ export const registerUser=async(req:Req,res:any)=>{
         if (username&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            if (await createFolder("users",email)==="create folder") {
-                pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [`@${username}`, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
-                    if (error) {
-                        res.status(408).send({error:`Account using ${email} already exist!`})
-                    }else{
-                        res.status(201).send({
-                            msg:`Welcome ${results.rows[0].username}`,
-                            data:{
-                                id:results.rows[0].id,
-                                username:results.rows[0].username,
-                                email:results.rows[0].email,
-                                photo:results.rows[0].photo,
-                                group_ownership:results.rows[0].group_ownership,
-                                token:generateUserToken(results.rows[0].id)
-                            }
-                        })
-                    }
-                })   
-            } else {
-                res.send({error:"Try again!!"})
-            }
-           
+            createFolder("users",email)
+            pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [`@${username}`, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
+                if (error) {
+                    res.status(408).send({error:`Account using ${email} already exist!`})
+                }else{
+                    res.status(201).send({
+                        msg:`Welcome ${results.rows[0].username}`,
+                        data:{
+                            id:results.rows[0].id,
+                            username:results.rows[0].username,
+                            email:results.rows[0].email,
+                            photo:results.rows[0].photo,
+                            token:generateUserToken(results.rows[0].id)
+                        }
+                    })
+                }
+            })    
         } else {
             res.status(403).send({error:"Fill all the required fields!!"})
         }
@@ -87,7 +82,7 @@ export const loginUser=async(req:Req,res:any)=>{
                     res.status(400).send({error:'Failed to sign in, try again!'})
                 }else{
                     if(results.rows[0]){
-                        await createFolder("users",results.rows[0].email)
+                        createFolder("users",results.rows[0].email)
                         if (results.rows[0].email&&await compare(password,results.rows[0].password)) {
                             pool.query('UPDATE users SET lastLogin = $1, userPlatform = $2 WHERE email = $3 RETURNING *',[lastLogin,userPlatform,results.rows[0].email],(error,results)=>{
                                 if(error){
@@ -100,7 +95,6 @@ export const loginUser=async(req:Req,res:any)=>{
                                             username:results.rows[0].username,
                                             email:results.rows[0].email,
                                             photo:results.rows[0].photo,
-                                            group_ownership:results.rows[0].group_ownership,
                                             token:generateUserToken(results.rows[0].id)
                                         }
                                     })
@@ -443,53 +437,48 @@ export const postMyUploads=async(req:any,res:any)=>{
 export const deleteUser=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
-        await removeFolder("users",email)
-        if (await removeFolder("users",email)==="remove folder") {
-            pool.query(`
-            DELETE FROM user_uploads WHERE email=$1 RETURNING *
-            `, [email], (error, results) => {
-                if (error) {
-                    res.status(408).send({error:`Failed to delete uploads associated with the email ${email}`})
-                    console.log(error)
-                }else{
-                    if (results.rows) {
-                        pool.query('DELETE FROM users WHERE email = $1 RETURNING *', [email], (error, results) => {
-                            if (error) {
-                                res.status(408).send({error:`Failed to delete account associated with the email ${email}`})
-                            }else{
-                                if (results.rows[0]) {
-                                    let mailTranporter=createTransport({
-                                        service:'gmail',
-                                        auth:{
-                                            user:process.env.TRANSPORTER,
-                                            pass:process.env.PASSWORD
-                                        }
-                                    });
-                                    let details:MailDetails={
-                                        from:process.env.TRANSPORTER,
-                                        to:results.rows[0].email,
-                                        subject:`Your Account Was Deleted`,
-                                        text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://wekafile.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+        removeFolder("users",email)
+        pool.query(`
+        DELETE FROM user_uploads WHERE email=$1 RETURNING *
+        `, [email], (error, results) => {
+            if (error) {
+                res.status(408).send({error:`Failed to delete uploads associated with the email ${email}`})
+                console.log(error)
+            }else{
+                if (results.rows) {
+                    pool.query('DELETE FROM users WHERE email = $1 RETURNING *', [email], (error, results) => {
+                        if (error) {
+                            res.status(408).send({error:`Failed to delete account associated with the email ${email}`})
+                        }else{
+                            if (results.rows[0]) {
+                                let mailTranporter=createTransport({
+                                    service:'gmail',
+                                    auth:{
+                                        user:process.env.TRANSPORTER,
+                                        pass:process.env.PASSWORD
                                     }
-                                    mailTranporter.sendMail(details,(err:any)=>{
-                                        if(err){
-                                            res.send({error:`Cannot sent email, try again!`});
-                                        } else{
-                                            res.status(200).send({msg:`Account associated with email ${results.rows[0].email} deteled successful`})
-                                        }
-                                    })   
-                                } else {
-                                    res.status(404).send({error:`Account associated with email ${email} does not exist!`})
+                                });
+                                let details:MailDetails={
+                                    from:process.env.TRANSPORTER,
+                                    to:results.rows[0].email,
+                                    subject:`Your Account Was Deleted`,
+                                    text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://wekafile.web.app/.\n\nFeel free to share your feedback by replying to this email.`
                                 }
+                                mailTranporter.sendMail(details,(err:any)=>{
+                                    if(err){
+                                        res.send({error:`Cannot sent email, try again!`});
+                                    } else{
+                                        res.status(200).send({msg:`Account associated with email ${results.rows[0].email} deteled successful`})
+                                    }
+                                })   
+                            } else {
+                                res.status(404).send({error:`Account associated with email ${email} does not exist!`})
                             }
-                        })
-                    }
+                        }
+                    })
                 }
-            })
-        }else{
-            res.send({error:"Try again!!"})
-        }
-        
+            }
+        })
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }

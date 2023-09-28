@@ -2,7 +2,7 @@ import express from "express"
 import { config } from "dotenv"
 import multer from "multer"
 import cors from "cors"
-import {rmSync, mkdir, existsSync, renameSync } from "fs"
+import {rmSync, mkdir,mkdirSync, existsSync, renameSync } from "fs"
 import socket from "./websocket"
 import router from "./routes/api"
 config()
@@ -47,42 +47,38 @@ app.post("/upload/:accountType/:email",upload.single("file"),async(req:any,res:a
 
 app.post("/upload/profile/:accountType/:email",upload.single("file"),async(req:any,res:any)=>{
     try {
-        renameSync(req.file.path, `${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`)
-        console.log(`Successfull moved file ${req.file.filename} to ${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`)
-        res.status(200).send({url:`${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`})
+        createFolder(req.params.accountType,req.params.email).then((msg:any)=>{
+            renameSync(req.file.path, `${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`)
+            console.log(`Successfull moved file ${req.file.filename} to ${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`)
+            res.status(200).send({url:`${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`})
+        }).catch((err:any)=>{
+            renameSync(req.file.path, `${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`)
+            console.log(`Successfull moved file ${req.file.filename} to ${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`)
+            res.status(200).send({url:`${path}/${req.params.accountType}/${req.params.email}/profile.${req.file.mimetype.slice(6,req.file.mimetype.length)}`})
+        })
     } catch (error:any) {
         res.status(505).send({error:error.message})
     }
 })
 
-export async function createFolder(accountType:string,email:string){
-    try {
+export function createFolder(accountType:string,email:string){
+    return new Promise((resolve,reject)=>{
         if (existsSync(`./uploads/${accountType}/${email}`)) {
-            return "Didnt create"
+            reject("folder exists")
         }    
-        mkdir(`./uploads/${accountType}/${email}`, { recursive: true },()=>{
-            console.log(`./uploads/${accountType}/${email} was created`)
-        })
-        return "create folder"
-    } catch (error:any) {
-        console.log({"error":error.message})
-        return "Didnt create"
-    }
+        mkdirSync(`./uploads/${accountType}/${email}`, { recursive: true })
+        resolve("folder created")
+    })
 }
 
-export async function removeFolder(accountType:string,email:string){
-    try {
-        console.log(existsSync(`./uploads/${accountType}/${email}`))
-        // if (!existsSync(`./uploads/${accountType}/${email}`)) {
-        //     return "Didnt remove"
-        // }
+export function removeFolder(accountType:string,email:string){
+    return new Promise((resolve,reject)=>{
+        if (!existsSync(`./uploads/${accountType}/${email}`)) {
+            reject("folder doesn't exist")
+        }    
         rmSync(`./uploads/${accountType}/${email}`, { recursive: true, force: true })
-        console.log(`./uploads/${accountType}/${email} was deleted!`);
-        return "remove folder"
-    } catch (error:any) {
-        console.log({"error":error.message})
-        return "Didnt remove"
-    }
+        resolve("folder removed")
+    })
 }
 
 function createUploadFolder(){
