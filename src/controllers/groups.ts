@@ -272,8 +272,8 @@ export const fetch_public_group_details=async(req:any,res:any)=>{
                 })
             }
         })
-    } catch (error) {
-        
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
     }
 }
 
@@ -288,7 +288,23 @@ export const updateGroupPic=async(req:any,res:any)=>{
                 res.status(201).send({msg:`You've update your group picture`})
             }
         })
-    }catch{
+    }catch(error:any){
+        res.status(500).send({error:error.message})
+    }
+}
 
+export const getAllGroups=async(req:any,res:any)=>{
+    try {
+        const email=req.params.email
+        pool.query('SELECT * FROM groups WHERE email = $1 OR privacy=false',[email], (error, results) => {
+            if (error) {
+                console.log(error)
+                res.send({error:`Failed to get groups.`})
+            }else{
+                res.send({groups:results.rows,count:results.rowCount})
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
     }
 }

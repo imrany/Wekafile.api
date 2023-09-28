@@ -51,22 +51,7 @@ export default function socket(io:any){
                 console.log(err)
             }
         });
-
-        socket.on("fetch_groups", (email:string, err:any) => {
-            pool.query('SELECT * FROM groups', (error, results) => {
-                if (error) {
-                    console.log(error)
-                    socket.emit("grp_response",{error:`Failed to get groups.`})
-                }else{
-                    socket.emit("grp_response",{groups:results.rows,count:results.rowCount})
-                }
-            })
-
-            if(err){
-                console.log(err)
-            }
-        });
-
+        
         //disconnect
         socket.on("disconnect", (reason:any) => {
             socket.emit(`${users.id} has left`)
