@@ -4,9 +4,6 @@ import { MailDetails, ReqGroup } from "../types/types";
 import { unlinkSync, existsSync } from "fs"
 import { createFolder, removeFolder } from "..";
 
-//     ipAddress varchar,
-//     members varchar[]
-
 export const registerGroup=async(req:ReqGroup,res:any)=>{
     try {
         const {groupname,grouptype,email,photo,lastLogin,userPlatform, privacy}=req.body;
@@ -190,38 +187,6 @@ export const giveAccess=async(req:any,res:any)=>{
     }
 }
 
-export const changeGroupVisiblity=async(req:any,res:any)=>{
-    try {
-        const email = req.params.email
-        const privacy=req.body.privacy
-        pool.query('UPDATE groups SET privacy = $1 WHERE email = $2 RETURNING *',[privacy,email], (error, results) => {
-            if(error){
-                console.log(error)
-                res.send({error:`Group associated with email ${email} does not exist!`})
-            }else{
-                const resp=privacy===true?"private":"public"
-                let data={
-                    id:results.rows[0].id,
-                    groupname:results.rows[0].groupname,
-                    email:results.rows[0].email,
-                    photo:results.rows[0].photo,
-                    privacy:results.rows[0].privacy,
-                }
-                pool.query('UPDATE group_uploads SET privacy = $1 WHERE email = $2',[privacy,email], (error, results) => {
-                    if(error){
-                        console.log(error)
-                        res.send({error:`Cannot find shared files associated with group ${email}!`})
-                    }else{
-                        res.send({msg:`Group is now ${resp}`,data})
-                    }
-                })
-            }
-        })
-    } catch (error:any) {
-        res.status(500).send({error:error.message})
-    }
-}
-
 export const deleteSharedFile=async(req:any,res:any)=>{
     try {
         const filename=req.params.filename
@@ -251,8 +216,8 @@ export const deleteSharedFile=async(req:any,res:any)=>{
 
 export const fetch_public_group_details=async(req:any,res:any)=>{
     try {
-        const {groupname}=req.params
-        pool.query('SELECT email,grouptype,groupname,photo, privacy, members FROM groups WHERE groupname = $1 AND privacy=false',[groupname], (error, results) => {
+        const {groupname,email}=req.params
+        pool.query('SELECT email,grouptype,groupname,photo, privacy, members FROM groups WHERE groupname = $1 AND privacy=false OR email=$2',[groupname,email], (error, results) => {
             if (error) {
                 console.log(error)
                 res.status(404).send({error:`Failed to select group ${groupname}!!`})
@@ -304,6 +269,191 @@ export const getAllGroups=async(req:any,res:any)=>{
                 res.send({groups:results.rows,count:results.rowCount})
             }
         })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
+
+
+export const updateGroup=async(req:any,res:any)=>{
+    try {
+        const email = req.params.email
+        const { groupname, groupphoto, privacy, member } = req.body
+        if(groupname&&privacy&&groupphoto){
+            //update username, password and photo
+            pool.query(
+                'UPDATE groups SET groupname = $1, privacy = $2,photo = $3 WHERE email = $4',
+                [groupname, privacy, groupphoto, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update group group name, privacy and group photo`})
+                    }else{
+                        pool.query(
+                        'UPDATE users SET group_ownership = $1 WHERE email = $2',
+                        [groupname, email],
+                        (error, results) => {
+                            if (error) {
+                                console.log(error)
+                                res.status(501).send({error:`Failed to update group details associated with email address ${email}}`})
+                            }else{
+                                pool.query('UPDATE group_uploads SET privacy = $1 WHERE email = $2',[privacy,email], (error, results) => {
+                                    if(error){
+                                        console.log(error)
+                                        res.send({error:`Cannot find shared files associated with group ${email}!`})
+                                    }else{
+                                        res.status(200).send({msg:`Group name, privacy and group photo updated successful`})
+                                    }
+                                })
+                            }
+                        })
+                    }
+            })
+        }else if(groupname&&privacy&&!groupphoto){
+            //update username and password only
+            pool.query(
+                'UPDATE groups SET groupname = $1, privacy = $2 WHERE email = $3',
+                [groupname, privacy, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update group group name and privacy`})
+                    }else{
+                        pool.query(
+                        'UPDATE users SET group_ownership = $1 WHERE email = $2',
+                        [groupname, email],
+                        (error, results) => {
+                            if (error) {
+                                console.log(error)
+                                res.status(501).send({error:`Failed to update group details associated with email address ${email}}`})
+                            }else{
+                                pool.query('UPDATE group_uploads SET privacy = $1 WHERE email = $2',[privacy,email], (error, results) => {
+                                    if(error){
+                                        console.log(error)
+                                        res.send({error:`Cannot find shared files associated with group ${email}!`})
+                                    }else{
+                                        res.status(200).send({msg:`Group name and privacy updated successful`})
+                                    }
+                                })
+                            }
+                        })
+                    }
+            })
+        }else if(groupname&&!privacy&&groupphoto){
+            //update username and photo only
+            pool.query(
+                'UPDATE groups SET groupname = $1, photo = $2 WHERE email = $2',
+                [groupname, groupphoto, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update group name and photo`})
+                    }else{
+                        pool.query(
+                        'UPDATE users SET group_ownership = $1 WHERE email = $2',
+                        [groupname, email],
+                        (error, results) => {
+                            if (error) {
+                                console.log(error)
+                                res.status(501).send({error:`Failed to update group details associated with email address ${email}}`})
+                            }else{
+                                res.status(200).send({msg:`Group name and group photo updated successful`})
+                            }
+                        })        
+                    }
+            })
+        }else if(!groupname&&!privacy&&groupphoto){
+            //update photo only
+            pool.query(
+                'UPDATE groups SET photo = $1 WHERE email = $2',
+                [groupphoto, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update group photo`})
+                    }else{
+                        res.status(200).send({msg:`Group photo updated`})
+                    }
+            })
+        }else if(!groupname&&privacy&&!groupphoto){
+            //update password only
+            pool.query('SELECT * FROM groups WHERE email = $1',[email],async (error,results)=>{
+                if(error){
+                    console.log(error)
+                    res.status(404).send({error:'User not found!'})
+                }else{
+                    pool.query('UPDATE groups SET privacy = $1 WHERE email = $2 RETURNING *',[privacy,email], (error, results) => {
+                        if(error){
+                            console.log(error)
+                            res.send({error:`Group associated with email ${email} does not exist!`})
+                        }else{
+                            const resp=privacy===true?"private":"public"
+                            let data={
+                                id:results.rows[0].id,
+                                groupname:results.rows[0].groupname,
+                                email:results.rows[0].email,
+                                photo:results.rows[0].photo,
+                                privacy:results.rows[0].privacy,
+                            }
+                            pool.query('UPDATE group_uploads SET privacy = $1 WHERE email = $2',[privacy,email], (error, results) => {
+                                if(error){
+                                    console.log(error)
+                                    res.send({error:`Cannot find shared files associated with group ${email}!`})
+                                }else{
+                                    res.send({msg:`Group is now ${resp}`,data})
+                                }
+                            })
+                        }
+                    })
+                }
+            })
+        }else if(groupname&&!privacy&&!groupphoto){
+            //update username only
+            pool.query(
+                'UPDATE users SET group_ownership = $1 WHERE email = $2',
+                [groupname, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update group details associated with email address ${email}}`})
+                    }else{
+                        pool.query(
+                            'UPDATE groups SET groupname = $1 WHERE email = $2',
+                            [groupname, email],
+                            (error, results) => {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(501).send({error:`Failed to update graoup details associated with email address ${email}}`})
+                                }else{
+                                    res.status(200).send({msg:`Group name updated successful`})
+                                }
+                        })
+                    }
+            })
+        }else if(member){
+            pool.query('SELECT * FROM users WHERE email = $1', [member], (error, results) => {
+                if (results.rows[0]) {
+                    pool.query('UPDATE group_uploads SET allowedEmails = ARRAY_APPEND(allowedEmails,$1) WHERE email = $2',[member,email], (error, results) => {
+                        if(error){
+                            console.log(error)
+                            res.send({error:"Cannot add member!!"})
+                        }else{
+                            pool.query('UPDATE groups SET allowedEmails = ARRAY_APPEND(members,$1) WHERE email = $2',[member,email], (error, results) => {
+                                if(error){
+                                    console.log(error)
+                                    res.send({error:"Cannot add member!!"})
+                                }else{
+                                    res.send({msg:`Member added successfully`})
+                                }
+                            })
+                        }
+                    })
+                }else{
+                    res.send({error:`Account associated with email ${member} does not exist.`})
+                }
+            })
+        }
+        
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }

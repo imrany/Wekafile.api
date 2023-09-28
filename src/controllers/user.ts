@@ -488,7 +488,7 @@ export const giveAccessToUpload=async(req:any,res:any)=>{
     try {
         const email = req.params.email
         const {filename,allowedEmail}=req.body
-        pool.query('SELECT * FROM groups WHERE email = $1', [allowedEmail], (error, results) => {
+        pool.query('SELECT * FROM users WHERE email = $1', [allowedEmail], (error, results) => {
             if (results.rows) {
                 pool.query('SELECT * FROM user_uploads WHERE email = $1 AND filename=$2',[email,filename],(error,result)=>{
                     if(error){
