@@ -292,10 +292,39 @@ export const removeMember=async(req:any,res:any)=>{
     }
 }
 
+export const uploadFile=async(req:any,res:any)=>{
+    try{
+        const {file_body}=req.body
+
+        pool.query('SELECT * FROM group_uploads WHERE filename = $1',[file_body.filename],async (error,results)=>{
+            if(error){
+                console.log(error)
+                res.send({error:'Failed store file, this file already exist!!'})
+            }else{
+                if(results.rows){
+                    pool.query('INSERT INTO group_uploads (filename,groupname,uploadedAt,size,file,type,email,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [file_body.filename,file_body.groupname,file_body.uploadedAt,file_body.size,file_body.file,file_body.type,file_body.email,file_body.privacy], (error:any, results) => {
+                        if (error) {
+                            res.send({error:`Failed store file, ${file_body.filename.slice(0,25)}... already exist!!`})
+                        }else{
+                            res.send({
+                                msg:`${file_body.filename.slice(0,25)}... was successfully added`,
+                            })
+                        }
+                    })   
+                }else{
+                    res.send({error:`Failed store file, ${file_body.filename.slice(0,25)}... already exist!!`})
+                }
+            }
+        })
+    }catch(error:any){
+        res.status(500).send({error:error.message})
+    }
+}
+
 export const updateGroup=async(req:any,res:any)=>{
     try {
         const email = req.params.email
-        const { groupname, groupphoto, privacy, member } = req.body
+        const { groupname, grouptype, groupphoto, privacy, member } = req.body
         if(groupname&&privacy&&groupphoto){
             //update username, password and photo
             pool.query(
@@ -359,7 +388,7 @@ export const updateGroup=async(req:any,res:any)=>{
         }else if(groupname&&!privacy&&groupphoto){
             //update username and photo only
             pool.query(
-                'UPDATE groups SET groupname = $1, photo = $2 WHERE email = $2',
+                'UPDATE groups SET groupname = $1, photo = $2 WHERE email = $3',
                 [groupname, groupphoto, email],
                 (error, results) => {
                     if (error) {
@@ -379,38 +408,41 @@ export const updateGroup=async(req:any,res:any)=>{
                         })        
                     }
             })
+        }else if(groupname&&!privacy&&grouptype){
+                //update username and photo only
+                pool.query(
+                    'UPDATE groups SET groupname = $1, grouptype = $2 WHERE email = $3',
+                    [groupname, grouptype, email],
+                    (error, results) => {
+                        if (error) {
+                            console.log(error)
+                            res.status(501).send({error:`Failed to update group name and group type`})
+                        }else{
+                            pool.query(
+                            'UPDATE users SET group_ownership = $1 WHERE email = $2',
+                            [groupname, email],
+                            (error, results) => {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(501).send({error:`Failed to update group details associated with email address ${email}}`})
+                                }else{
+                                    res.status(200).send({msg:`Group name and group type updated successful`})
+                                }
+                            })        
+                        }
+                })
         }else if(!groupname&&!privacy&&groupphoto){
             //update photo only
             pool.query(
                 'UPDATE groups SET photo = $1 WHERE email = $2',
                 [groupphoto, email],
                 (error, results) => {
-                    if (error) {
-                        console.log(error)
-                        res.status(501).send({error:`Failed to update group photo`})
-                    }else{
-                        res.status(200).send({msg:`Group photo updated`})
-                    }   pool.query('SELECT * FROM users WHERE email = $1', [member], (error, results) => {
-                if (results.rows[0]) {
-                    pool.query('UPDATE group_uploads SET allowedEmails = ARRAY_APPEND(allowedEmails,$1) WHERE email = $2',[member,email], (error, results) => {
-                        if(error){
-                            console.log(error)
-                            res.send({error:"Cannot add member!!"})
-                        }else{
-                            pool.query('UPDATE groups SET members = ARRAY_APPEND(members,$1) WHERE email = $2',[member,email], (error, results) => {
-                                if(error){
-                                    console.log(error)
-                                    res.send({error:"Cannot add member!!"})
-                                }else{
-                                    res.send({msg:`Member added successfully`})
-                                }
-                            })
-                        }
-                    })
+                if (error) {
+                    console.log(error)
+                    res.status(501).send({error:`Failed to update group photo`})
                 }else{
-                    res.send({error:`Account associated with email ${member} does not exist.`})
-                }
-            })
+                    res.status(200).send({msg:`Group photo updated`})
+                }   
             })
         }else if(!groupname&&privacy&&!groupphoto){
             //update password only
@@ -490,7 +522,6 @@ export const updateGroup=async(req:any,res:any)=>{
                 }
             })
         }
-        
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
