@@ -114,9 +114,9 @@ export const deleteGroup=async(req:ReqGroup,res:any)=>{
                         }else{
                             let group_results=results.rows[0]
                             if (group_results) {
-                                pool.query('DELETE group_ownership FROM users WHERE email = $1 RETURNING *', [email], (error, results) => {
+                                pool.query('UPDATE users SET group_ownership = null WHERE email = $1 RETURNING *', [email], (error, results) => {
                                     if (error) {
-                                        res.status(408).send({error:`Failed to delete group_ownership from user, ${email}`})
+                                        res.status(408).send({error:`Failed to remove group_ownership from user, ${email}`})
                                     }else{
                                         let mailTranporter=createTransport({
                                             service:'gmail',
