@@ -242,22 +242,6 @@ export const fetch_public_group_details=async(req:any,res:any)=>{
     }
 }
 
-export const updateGroupPic=async(req:any,res:any)=>{
-    try{
-        const {email}=req.params
-        const {photo}=req.body
-        pool.query('UPDATE groups SET photo = $1 WHERE email = $2 RETURNING *',[photo,email],(error,results)=>{
-            if(error){
-                console.log(error)
-            }else{
-                res.status(201).send({msg:`You've update your group picture`})
-            }
-        })
-    }catch(error:any){
-        res.status(500).send({error:error.message})
-    }
-}
-
 export const getAllGroups=async(req:any,res:any)=>{
     try {
         const email=req.params.email
@@ -274,6 +258,35 @@ export const getAllGroups=async(req:any,res:any)=>{
     }
 }
 
+export const removeMember=async(req:any,res:any)=>{
+    try {
+        const email = req.params.email
+        const { member } = req.body
+        pool.query('SELECT * FROM users WHERE email = $1', [member], (error, results) => {
+            if (results.rows[0]) {
+                pool.query('UPDATE group_uploads SET allowedEmails = ARRAY_REMOVE(allowedEmails,$1) WHERE email = $2',[member,email], (error, results) => {
+                    if(error){
+                        console.log(error)
+                        res.send({error:"Cannot remove member!!"})
+                    }else{
+                        pool.query('UPDATE groups SET members = ARRAY_REMOVE(members,$1) WHERE email = $2',[member,email], (error, results) => {
+                            if(error){
+                                console.log(error)
+                                res.send({error:"Cannot remove member!!"})
+                            }else{
+                                res.send({msg:`Member removed successfully`})
+                            }
+                        })
+                    }
+                })
+            }else{
+                res.send({error:`Account associated with email ${member} does not exist.`})
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
 
 export const updateGroup=async(req:any,res:any)=>{
     try {
@@ -373,7 +386,27 @@ export const updateGroup=async(req:any,res:any)=>{
                         res.status(501).send({error:`Failed to update group photo`})
                     }else{
                         res.status(200).send({msg:`Group photo updated`})
-                    }
+                    }   pool.query('SELECT * FROM users WHERE email = $1', [member], (error, results) => {
+                if (results.rows[0]) {
+                    pool.query('UPDATE group_uploads SET allowedEmails = ARRAY_APPEND(allowedEmails,$1) WHERE email = $2',[member,email], (error, results) => {
+                        if(error){
+                            console.log(error)
+                            res.send({error:"Cannot add member!!"})
+                        }else{
+                            pool.query('UPDATE groups SET members = ARRAY_APPEND(members,$1) WHERE email = $2',[member,email], (error, results) => {
+                                if(error){
+                                    console.log(error)
+                                    res.send({error:"Cannot add member!!"})
+                                }else{
+                                    res.send({msg:`Member added successfully`})
+                                }
+                            })
+                        }
+                    })
+                }else{
+                    res.send({error:`Account associated with email ${member} does not exist.`})
+                }
+            })
             })
         }else if(!groupname&&privacy&&!groupphoto){
             //update password only
@@ -438,7 +471,7 @@ export const updateGroup=async(req:any,res:any)=>{
                             console.log(error)
                             res.send({error:"Cannot add member!!"})
                         }else{
-                            pool.query('UPDATE groups SET allowedEmails = ARRAY_APPEND(members,$1) WHERE email = $2',[member,email], (error, results) => {
+                            pool.query('UPDATE groups SET members = ARRAY_APPEND(members,$1) WHERE email = $2',[member,email], (error, results) => {
                                 if(error){
                                     console.log(error)
                                     res.send({error:"Cannot add member!!"})

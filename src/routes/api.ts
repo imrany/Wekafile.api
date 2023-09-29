@@ -1,6 +1,6 @@
 import express from "express"
 import { deleteUploadFile, deleteUser, getMyUploads, getUserDetails, getUsers, loginUser, postMyUploads, protectUser, registerUser, updateUser, verifyEmail } from "../controllers/user"
-import { deleteSharedFile, deleteGroup, getGroupDetails, giveAccess, loginGroup, registerGroup, fetch_public_group_details, getAllGroups, updateGroup } from "../controllers/groups"
+import { deleteSharedFile, deleteGroup, getGroupDetails, giveAccess, loginGroup, registerGroup, fetch_public_group_details, getAllGroups, updateGroup, removeMember } from "../controllers/groups"
 const router=express.Router()
 
 router.post("/verify",verifyEmail)
@@ -23,6 +23,7 @@ router.get("/groups/:email",protectUser,getGroupDetails)
 router.get("/fetch_groups/:email",protectUser,getAllGroups)
 router.delete("/groups/:email",protectUser,deleteGroup)
 router.patch("/groups/:email",protectUser,updateGroup)
+router.patch("/groups_member/:email",protectUser,removeMember)
 
 router.get("/public_groups/:groupname/:email",fetch_public_group_details)
 
