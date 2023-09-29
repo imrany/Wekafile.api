@@ -99,7 +99,7 @@ export const getGroupDetails=async(req:ReqGroup,res:any)=>{
     }
 }
 
-export const deleteGroup=async(req:ReqGroup,res:any)=>{
+export const deleteGroup=async(req:ReqGroup,res:any)=>{ 
     try {
         const email = req.params.email
         removeFolder("groups",email)
@@ -223,18 +223,22 @@ export const fetch_public_group_details=async(req:any,res:any)=>{
                 res.status(404).send({error:`Failed to select group ${groupname}!!`})
             }else{
                 const details=results.rows[0]
-                pool.query('SELECT filename,email,file,uploadedAt,size,type,groupname FROM group_uploads WHERE groupname = $1 AND privacy=false',[details.groupname], (error, results) => {
-                    if (error) {
-                        console.log(error)
-                        res.status(404).send({error:`Failed to select group ${details.groupname}!!`})
-                    }else{
-                        res.send({
-                            details,
-                            files:results.rows,
-                            count:results.rowCount
-                        })
-                    }
-                })
+               if(details){
+                    pool.query('SELECT filename,email,file,uploadedAt,size,type,groupname FROM group_uploads WHERE groupname = $1 AND privacy=false',[details.groupname], (error, results) => {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).send({error:`Failed to select group ${details.groupname}!!`})
+                        }else{
+                            res.send({
+                                details,
+                                files:results.rows,
+                                count:results.rowCount
+                            })
+                        }
+                    })
+               }else{
+                res.status(404).send({error:`Group ${groupname} does not exit!`})
+               }
             }
         })
     } catch (error:any) {
