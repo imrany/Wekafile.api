@@ -217,7 +217,7 @@ export const deleteSharedFile=async(req:any,res:any)=>{
 export const fetch_public_group_details=async(req:any,res:any)=>{
     try {
         const {groupname,email}=req.params
-        pool.query('SELECT email,grouptype,groupname,photo, privacy, members FROM groups WHERE groupname = $1 AND privacy=false OR email=$2',[groupname,email], (error, results) => {
+        pool.query('SELECT email,grouptype,groupname,photo, privacy, members FROM groups WHERE groupname = $1 AND privacy=false',[groupname], (error, results) => {
             if (error) {
                 console.log(error)
                 res.status(404).send({error:`Failed to select group ${groupname}!!`})
