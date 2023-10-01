@@ -40,14 +40,14 @@ create index group_idx on groups (email);
 
 -- group_uploads table
 create table group_uploads(
-    filename varchar not null primary key,
+    filename varchar not null,
     email varchar not null,
     allowedEmails varchar[],
     groupname varchar not null,
     uploadedAt varchar,
     size varchar,
     privacy boolean,
-    file varchar,
+    file varchar primary key,
     type varchar
 );
 create index group_uploads_idx on group_uploads (email);

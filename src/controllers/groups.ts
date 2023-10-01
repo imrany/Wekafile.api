@@ -9,7 +9,7 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
         const {groupname,grouptype,email,photo,lastLogin,userPlatform, privacy}=req.body;
         console.log(groupname,grouptype,email,photo,lastLogin,userPlatform, privacy)
         if (groupname&&grouptype&&email) {
-            pool.query('INSERT INTO groups (groupname,grouptype,email,lastLogin,userPlatform,privacy,photo) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [`@${groupname}`,grouptype,email,lastLogin,userPlatform,privacy,photo], (error:any, results) => {
+            pool.query('INSERT INTO groups (groupname,grouptype,email,lastLogin,userPlatform,privacy,photo) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [groupname,grouptype,email,lastLogin,userPlatform,privacy,photo], (error:any, results) => {
                 let group_results=results.rows[0]
                 if (error) {
                     res.status(408).send({error:`Account using ${email} already exist!`})
@@ -217,14 +217,14 @@ export const deleteSharedFile=async(req:any,res:any)=>{
 export const fetch_public_group_details=async(req:any,res:any)=>{
     try {
         const {groupname,email}=req.params
-        pool.query('SELECT email,grouptype,groupname,photo, privacy, members FROM groups WHERE groupname = $1 AND privacy=false',[groupname], (error, results) => {
+        pool.query('SELECT email,grouptype,groupname,photo, privacy, members FROM groups WHERE groupname = $1 AND $2=ANY(members) OR groupname=$1 AND privacy=false OR groupname=$1 AND email=$2',[groupname,email], (error, results) => {
             if (error) {
                 console.log(error)
                 res.status(404).send({error:`Failed to select group ${groupname}!!`})
             }else{
                 const details=results.rows[0]
                if(details){
-                    pool.query('SELECT filename,email,file,uploadedAt,size,type,groupname FROM group_uploads WHERE groupname = $1 AND privacy=false',[details.groupname], (error, results) => {
+                    pool.query('SELECT filename,email,file,uploadedAt,size,type,groupname FROM group_uploads WHERE groupname = $1 AND $2=ANY(allowedEmails) OR groupname = $1 AND email=$2 OR groupname=$1 AND privacy=false',[details.groupname,email], (error, results) => {
                         if (error) {
                             console.log(error)
                             res.status(404).send({error:`Failed to select group ${details.groupname}!!`})
@@ -249,7 +249,7 @@ export const fetch_public_group_details=async(req:any,res:any)=>{
 export const getAllGroups=async(req:any,res:any)=>{
     try {
         const email=req.params.email
-        pool.query('SELECT * FROM groups WHERE email = $1 OR privacy=false',[email], (error, results) => {
+        pool.query("SELECT email,groupname,grouptype,photo,privacy,members FROM groups WHERE email = $1 OR $1=ANY(members) OR privacy=false",[email], (error, results) => {
             if (error) {
                 console.log(error)
                 res.send({error:`Failed to get groups.`})
@@ -295,25 +295,98 @@ export const removeMember=async(req:any,res:any)=>{
 export const uploadFile=async(req:any,res:any)=>{
     try{
         const {file_body}=req.body
-
-        pool.query('SELECT * FROM group_uploads WHERE filename = $1',[file_body.filename],async (error,results)=>{
+        pool.query('SELECT groupname,members,privacy FROM groups WHERE groupname = $1 OR $2=ANY(members) OR email=$2',[file_body.groupname,file_body.email],async (error,results)=>{
             if(error){
                 console.log(error)
-                res.send({error:'Failed store file, this file already exist!!'})
+                res.send({error:`Group ${file_body.groupname} doesn't exist!!`})
             }else{
-                if(results.rows){
-                    pool.query('INSERT INTO group_uploads (filename,groupname,uploadedAt,size,file,type,email,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [file_body.filename,file_body.groupname,file_body.uploadedAt,file_body.size,file_body.file,file_body.type,file_body.email,file_body.privacy], (error:any, results) => {
-                        if (error) {
-                            res.send({error:`Failed store file, ${file_body.filename.slice(0,25)}... already exist!!`})
+                const group=results.rows[0]
+                if(group){
+                    pool.query('SELECT * FROM group_uploads WHERE filename = $1 AND groupname=$2',[file_body.filename,group.groupname],async (error,results)=>{
+                        if(error){
+                            console.log(error)
+                            res.send({error:'Failed store file, this file already exist!!'})
                         }else{
-                            res.send({
-                                msg:`${file_body.filename.slice(0,25)}... was successfully added`,
-                            })
+                            if(results.rows){
+                                pool.query('INSERT INTO group_uploads (filename,groupname,uploadedAt,size,file,type,email,privacy) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *', [file_body.filename,file_body.groupname,file_body.uploadedAt,file_body.size,file_body.file,file_body.type,file_body.email,group.privacy], (error:any, results) => {
+                                    if (error) {
+                                        res.send({error:`Failed store file, ${file_body.filename.slice(0,25)}... already exist!!`})
+                                    }else{
+                                        pool.query('UPDATE group_uploads SET allowedEmails = ARRAY_APPEND(allowedEmails,$1) WHERE groupname = $2', [group.members,group.groupname], (error:any, results) => {
+                                            if (error) {
+                                                res.send({error:`Failed update file, ${file_body.filename.slice(0,25)}...!!`})
+                                            }else{
+                                                res.send({
+                                                    msg:`${file_body.filename.slice(0,25)}... was successfully added`,
+                                                })
+                                            }
+                                        })
+                                    }
+                                })   
+                            }else{
+                                res.send({error:`Failed store file, ${file_body.filename.slice(0,25)}... already exist!!`})
+                            }
                         }
-                    })   
-                }else{
-                    res.send({error:`Failed store file, ${file_body.filename.slice(0,25)}... already exist!!`})
+                    })
                 }
+            }
+        })
+    }catch(error:any){
+        res.status(500).send({error:error.message})
+    }
+}
+
+export const join_group=async(req:any,res:any)=>{
+    try{
+        const {groupname,email}=req.params
+        pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
+            if (results.rows[0]) {
+                pool.query('UPDATE group_uploads SET allowedEmails = ARRAY_APPEND(allowedEmails,$1) WHERE groupname = $2',[email,groupname], (error, results) => {
+                    if(error){
+                        console.log(error)
+                        res.send({error:"Cannot add member!!"})
+                    }else{
+                        pool.query('UPDATE groups SET members = ARRAY_APPEND(members,$1) WHERE groupname = $2',[email,groupname], (error, results) => {
+                            if(error){
+                                console.log(error)
+                                res.send({error:"Cannot add member!!"})
+                            }else{
+                                res.send({msg:`You were added successfully`})
+                            }
+                        })
+                    }
+                })
+            }else{
+                res.send({error:`Account associated with email ${email} does not exist.`})
+            }
+        })
+    }catch(error:any){
+        res.status(500).send({error:error.message})
+    }
+}
+
+export const exit_group=async(req:any,res:any)=>{
+    try{
+        const {groupname,email}=req.params
+        pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
+            if (results.rows[0]) {
+                pool.query('UPDATE group_uploads SET allowedEmails = ARRAY_REMOVE(allowedEmails,$1) WHERE groupname = $2',[email,groupname], (error, results) => {
+                    if(error){
+                        console.log(error)
+                        res.send({error:"Cannot exit group!"})
+                    }else{
+                        pool.query('UPDATE groups SET members = ARRAY_REMOVE(members,$1) WHERE groupname = $2',[email,groupname], (error, results) => {
+                            if(error){
+                                console.log(error)
+                                res.send({error:"Cannot exit group!!"})
+                            }else{
+                                res.send({msg:`You were removed successfully`})
+                            }
+                        })
+                    }
+                })
+            }else{
+                res.send({error:`Account associated with email ${email} does not exist.`})
             }
         })
     }catch(error:any){
