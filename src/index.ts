@@ -5,6 +5,7 @@ import cors from "cors"
 import {rmSync, mkdir,mkdirSync, existsSync, renameSync } from "fs"
 import socket from "./websocket"
 import router from "./routes/api"
+import drive from './google/drive'
 config()
 
 const cors_option = {
@@ -32,6 +33,7 @@ app.set('view engine','ejs');
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
 app.use('/uploads',express.static(`uploads`));
+app.use('/drive',drive)
 app.use("/api",router)
 
 //routes
