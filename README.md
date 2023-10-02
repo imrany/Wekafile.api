@@ -1,15 +1,15 @@
-# Fileshare API
-Manage and share your files with Fileshare.
+# Wekafile API
+Manage and share your files with Wekafile.
 
 
 # Contribution 
 Fork the repo then clone
 ```bash
-git clone https://github.com/imrany/Fileshare.server
+git clone https://github.com/imrany/Wekafile.api
 ```
 then 
 ```bash
-cd Fileshare.server
+cd Wekafile.api
 ```
 Engine configurations,
 ensure you have
