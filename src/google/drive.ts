@@ -88,17 +88,21 @@ drive.get('/files/:id',handleAuth,async(req:any,res:any)=>{
 })
 
 
-//fetch all user uploads from drive
+//fetch all user uploads  e.g file not folders from drive
 drive.get('/files',handleAuth,async(req,res)=>{
     const files:any[] = [];
     try {
-        const response:any = await service.files.list({});
+        const response:any = await service.files.list({
+            // q: 'mimeType=\'image/jpeg\'',
+            q: 'mimeType!=\'application/vnd.google-apps.folder\'',
+            fields: 'nextPageToken, files(id,name,createdTime,kind,mimeType,modifiedTime,size)',
+        });
         Array.prototype.push.apply(files, response.files);
         if(response.data.files.length===0){
             console.log({error:"No files found"})
         }else{
             res.send({files:response.data.files});
-            console.log(response.data.files)
+            console.log(response.data)
         }
     } catch (error:any) {
         res.status(500).send({error:error.message})
