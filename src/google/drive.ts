@@ -16,13 +16,14 @@ const drive=express.Router()
 
 const handleAuth=async(req:any,res:any,next:any)=>{
     let token
-    if(req.headers.authorization&&req.headers.authorization.startsWith('Bearer')){
+    if(req.headers.authorization){
         try{
-            token=req.headers.authorization.split(' ')[1]
+            token=req.headers.authorization
             oauth2Client.setCredentials(JSON.parse(token))
             next()
         }catch (error:any){
             res.status(401).send({error:'Not Authorised☠'})
+            console.log(error)
         }
     }
     if(!token){
@@ -97,6 +98,7 @@ drive.get('/files',handleAuth,async(req,res)=>{
             console.log({error:"No files found"})
         }else{
             res.send({files:response.data.files});
+            console.log(response.data.files)
         }
     } catch (error:any) {
         res.status(500).send({error:error.message})
