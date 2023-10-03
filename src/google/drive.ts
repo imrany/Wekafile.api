@@ -51,7 +51,8 @@ drive.get('/google/redirect',async(req:any,res:any)=>{
         const code:any=req.query.code
         const {tokens}= await oauth2Client.getToken(code)
         oauth2Client.setCredentials(tokens)
-        res.send({tokens:tokens})
+        let redirect_url=`http://localhost:3000/provider?access_token=${JSON.stringify(tokens)}`
+        res.redirect(redirect_url)
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
