@@ -59,6 +59,25 @@ drive.get('/google/redirect',async(req:any,res:any)=>{
     }
 })
 
+//create a wekafile user folder
+drive.post('/create/:username',handleAuth,async(req:any,res:any)=>{
+    try {
+        const {username}=req.params
+        const fileMetadata = {
+            name: `wekafile_${username}`,
+            mimeType: 'application/vnd.google-apps.folder',
+        };
+        const file = await service.files.create({
+            // resource: fileMetadata,
+            requestBody:fileMetadata,
+            fields: 'id',
+        });
+        console.log('Wekafile folder created', file.data.id);
+    } catch (error:any) {
+        console.log(error)
+    }
+})
+
 //fetch user upload from drive by fieldId
 drive.get('/files/:id',handleAuth,async(req:any,res:any)=>{
     try {

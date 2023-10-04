@@ -47,7 +47,6 @@ export const registerUser=async(req:Req,res:any)=>{
         if (username&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            createFolder("users",email)
             pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [`@${username}`, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
                 if (error) {
                     res.status(408).send({error:`Account using ${email} already exist!`})
@@ -82,7 +81,6 @@ export const loginUser=async(req:Req,res:any)=>{
                     res.status(400).send({error:'Failed to sign in, try again!'})
                 }else{
                     if(results.rows[0]){
-                        createFolder("users",results.rows[0].email)
                         if (results.rows[0].email&&await compare(password,results.rows[0].password)) {
                             pool.query('UPDATE users SET lastLogin = $1, userPlatform = $2 WHERE email = $3 RETURNING *',[lastLogin,userPlatform,results.rows[0].email],(error,results)=>{
                                 if(error){
