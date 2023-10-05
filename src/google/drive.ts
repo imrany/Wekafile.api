@@ -1,5 +1,7 @@
 import express from "express"
 import { google } from "googleapis"
+import formidable from "formidable"
+import {createReadStream} from 'fs'
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
@@ -31,10 +33,6 @@ const handleAuth=async(req:any,res:any,next:any)=>{
     }
 };
 
-//uploading profile and storing details to db
-//uploading user file and storing details to db
-//fetching user uploads from drive
-//deleting user uploads and db details
 drive.get('/auth/google',async(req:any,res:any)=>{
     try {
         const url=oauth2Client.generateAuthUrl({
@@ -57,75 +55,46 @@ drive.get('/google/redirect',async(req:any,res:any)=>{
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
-})
+});
 
-//create a wekafile user folder
-drive.post('/create/:username',handleAuth,async(req:any,res:any)=>{
+//upload file
+drive.post('/upload',handleAuth,async(req:any, res:any) => {
     try {
-        const {username}=req.params
-        const fileMetadata = {
-            name: `wekafile_${username}`,
-            mimeType: 'application/vnd.google-apps.folder',
-        };
-        const file = await service.files.create({
-            // resource: fileMetadata,
-            requestBody:fileMetadata,
-            fields: 'id',
+        var form = new formidable.IncomingForm();
+        form.parse(req, async(err:any, files:any) => {
+            if (err) return res.status(400).send(err);
+            console.log(files.file);
+            const fileMetadata = {
+                name: files.file.name,
+            };
+            const media = {
+                mimeType: files.file.type,
+                body: createReadStream(files.file.path),
+            };
+            const response=await service.files.create(
+                {
+                    // resource: fileMetadata,
+                    requestBody:fileMetadata,
+                    media: media,
+                    fields: "id",
+                }
+            );
+            res.send(response.data.id);
         });
-        console.log('Wekafile folder created', file.data.id);
-    } catch (error:any) {
-        console.log(error)
-    }
-})
-
-//fetch user upload from drive by fieldId
-drive.get('/files/:id',handleAuth,async(req:any,res:any)=>{
-    try {
-        const {id}=req.params
-        await service.permissions.create({
-            fileId:id,
-            requestBody:{
-                role:"reader",
-                type:"anyone"
-            }
-        })
-        service.files.get({ fileId: id, alt: 'media' }, { responseType: 'stream' },
-            function (err:any, response:any) {
-                response.data
-                    .on('end', () => {
-                        console.log('Done');
-                    })
-                    .on('error', (err:any)=> {
-                        console.log('Error', err);
-                    })
-                    .pipe(res);
-            }
-        );
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
-})
+});
 
-
-//fetch all user uploads  e.g file not folders from drive
-drive.get('/files',handleAuth,async(req,res)=>{
-    const files:any[] = [];
-    try {
-        const response:any = await service.files.list({
-            // q: 'mimeType=\'image/jpeg\'',
-            q: 'mimeType!=\'application/vnd.google-apps.folder\'',
-            fields: 'nextPageToken, files(id,name,createdTime,kind,mimeType,modifiedTime,size)',
-        });
-        Array.prototype.push.apply(files, response.files);
-        if(response.data.files.length===0){
-            console.log({error:"No files found"})
-        }else{
-            res.send({files:response.data.files});
-            console.log(response.data)
-        }
-    } catch (error:any) {
-        res.status(500).send({error:error.message})
-    }
-})
+//delete drive file
+drive.delete('/delete/:id',handleAuth,async(req:any, res:any) => {
+  try {
+    var fileId = req.params.id;
+    const response=await service.files.delete({ 'fileId': fileId })
+    res.send({msg:response.data})
+  } catch (error:any) {
+    res.status(500).send({error:error.message})
+  }
+});
 
 export default drive
