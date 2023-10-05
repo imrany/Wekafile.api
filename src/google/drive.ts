@@ -79,7 +79,7 @@ drive.post('/upload',handleAuth,async(req:any, res:any) => {
                     fields: "id",
                 }
             );
-            res.send(response.data.id);
+            res.send({id:response.data.id});
         });
     } catch (error:any) {
         res.status(500).send({error:error.message})
