@@ -2,6 +2,7 @@ import express from "express"
 import { google } from "googleapis"
 import formidable from "formidable"
 import {createReadStream} from 'fs'
+import pool from "../pg";
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
@@ -73,15 +74,24 @@ drive.post('/upload',handleAuth,async(req:any, res:any) => {
                 mimeType: files.mimetype,
                 body: createReadStream(files.filepath),
             };
-            const response=await service.files.create(
-                {
-                    resource: fileMetadata,
-                    media: media,
-                    fields: "id",
+            pool.query('SELECT * FROM user_uploads WHERE filename = $1',[files.originalFilename],async (error,results)=>{
+                if(error){
+                    console.log(error)
+                    res.status(400).send({error:'Failed upload file'})
+                }else{
+                    if(!results.rows){
+                        const response=await service.files.create(
+                            {
+                                resource: fileMetadata,
+                                media: media,
+                                fields: "id",
+                            }
+                        );
+                        console.log(`${files.originalFilename} uploaded to drive`);
+                        res.send({id:response.data.id});
+                    }
                 }
-            );
-            console.log(`${files.originalFilename} uploaded to drive`);
-            res.send({id:response.data.id});
+            })
         });
     } catch (error:any) {
         res.status(500).send({error:error.message})
