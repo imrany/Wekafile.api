@@ -3,6 +3,9 @@
   "version": "2.0.0",
   "description": "Manage and share files.",
   "main": "./build/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node ./build/index.js",
     "tailwindcss": "npx tailwindcss -i ./views/static/css/input.css -o ./views/static/css/index.css --watch",
