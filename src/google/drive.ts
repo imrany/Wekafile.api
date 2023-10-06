@@ -76,7 +76,6 @@ drive.post('/upload',handleAuth,async(req:any, res:any) => {
             const response=await service.files.create(
                 {
                     resource: fileMetadata,
-                    // requestBody:fileMetadata,
                     media: media,
                     fields: "id",
                 }
@@ -117,7 +116,6 @@ drive.delete('/delete/:id',handleAuth,async(req:any, res:any) => {
 //                 .pipe(res);
 //         }
 //     );
-
 // })
 
 export default drive
