@@ -100,4 +100,24 @@ drive.delete('/delete/:id',handleAuth,async(req:any, res:any) => {
   }
 });
 
+// app.post('/download/:id', (req, res) => {
+//     if (req.body.token == null) return res.status(400).send('Token not found');
+//     oAuth2Client.setCredentials(req.body.token);
+//     const drive = google.drive({ version: 'v3', auth: oAuth2Client });
+//     var fileId = req.params.id;
+//     drive.files.get({ fileId: fileId, alt: 'media' }, { responseType: 'stream' },
+//         function (err, response) {
+//             response.data
+//                 .on('end', () => {
+//                     console.log('Done');
+//                 })
+//                 .on('error', err => {
+//                     console.log('Error', err);
+//                 })
+//                 .pipe(res);
+//         }
+//     );
+
+// })
+
 export default drive
