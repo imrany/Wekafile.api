@@ -3,7 +3,6 @@ import { createTransport } from "nodemailer"
 import { MailDetails, Req } from "../types/types";
 import {genSalt, compare, hash} from "bcryptjs";
 import { verify, sign } from "jsonwebtoken"
-import { createFolder, removeFolder } from "..";
 import { unlinkSync, existsSync } from "fs"
 
 export const verifyEmail=async(req:Req,res:any)=>{
@@ -435,7 +434,6 @@ export const postMyUploads=async(req:any,res:any)=>{
 export const deleteUser=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
-        removeFolder("users",email)
         pool.query(`
         DELETE FROM user_uploads WHERE email=$1 RETURNING *
         `, [email], (error, results) => {

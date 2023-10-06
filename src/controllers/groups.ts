@@ -2,7 +2,6 @@ import pool from "../pg";
 import { createTransport } from "nodemailer"
 import { MailDetails, ReqGroup } from "../types/types";
 import { unlinkSync, existsSync } from "fs"
-import { createFolder, removeFolder } from "..";
 
 export const registerGroup=async(req:ReqGroup,res:any)=>{
     try {
@@ -42,10 +41,8 @@ export const loginGroup=async(req:ReqGroup,res:any)=>{
                     console.log(error)
                     res.status(400).send({error:'Failed to sign in, try again!'})
                 }else{
-                    createFolder("groups",results.rows[0].email)
                     if(results.rows[0]){
                         if (results.rows[0].email) {
-                            await createFolder("groups",results.rows[0].email)
                             pool.query('UPDATE groups SET lastLogin = $1, userPlatform = $2 WHERE email = $3 RETURNING *',[lastLogin,userPlatform,results.rows[0].email],(error,results)=>{
                                 if(error){
                                     console.log(error)
@@ -102,7 +99,6 @@ export const getGroupDetails=async(req:ReqGroup,res:any)=>{
 export const deleteGroup=async(req:ReqGroup,res:any)=>{ 
     try {
         const email = req.params.email
-        removeFolder("groups",email)
         pool.query('DELETE FROM group_uploads WHERE email = $1 RETURNING *', [email], (error, results) => {
             if (error) {
                 res.status(408).send({error:`Failed to delete shared files associated with the email ${email}`})
