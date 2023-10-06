@@ -9,7 +9,7 @@ const oauth2Client = new google.auth.OAuth2(
     process.env.REDIRECT_URL
 );
 
-const service = google.drive({
+const service:any = google.drive({
     version: 'v3',
     auth: oauth2Client
 });
@@ -60,25 +60,28 @@ drive.get('/google/redirect',async(req:any,res:any)=>{
 //upload file
 drive.post('/upload',handleAuth,async(req:any, res:any) => {
     try {
-        var form = new formidable.IncomingForm();
-        form.parse(req, async(err:any, files:any) => {
-            if (err) return res.status(400).send(err);
-            console.log(files.file);
+        var form =formidable({
+            keepExtensions:true,
+            maxFileSize:5 * 1024 * 1024 //5mbs
+        });
+        form.parse(req)
+        form.on('file',async(name:any, files:any) => {
             const fileMetadata = {
-                name: files.file.name,
+                name: files.originalFilename,
             };
             const media = {
-                mimeType: files.file.type,
-                body: createReadStream(files.file.path),
+                mimeType: files.mimetype,
+                body: createReadStream(files.filepath),
             };
             const response=await service.files.create(
                 {
-                    // resource: fileMetadata,
-                    requestBody:fileMetadata,
+                    resource: fileMetadata,
+                    // requestBody:fileMetadata,
                     media: media,
                     fields: "id",
                 }
             );
+            console.log(`${files.originalFilename} uploaded to drive`);
             res.send({id:response.data.id});
         });
     } catch (error:any) {
