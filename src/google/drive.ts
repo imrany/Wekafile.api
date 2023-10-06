@@ -103,7 +103,7 @@ drive.delete('/delete/:id',handleAuth,async(req:any, res:any) => {
   try {
     var fileId = req.params.id;
     const response=await service.files.delete({ 'fileId': fileId })
-    res.send({msg:response.data})
+    res.send({id:response.data.id})
   } catch (error:any) {
     res.status(500).send({error:error.message})
   }
