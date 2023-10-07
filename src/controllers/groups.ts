@@ -1,19 +1,24 @@
 import pool from "../pg";
 import { createTransport } from "nodemailer"
 import { MailDetails, ReqGroup } from "../types/types";
-import { unlinkSync, existsSync } from "fs"
+import axios from "axios";
 
 export const registerGroup=async(req:ReqGroup,res:any)=>{
     try {
-        const {groupname,grouptype,email,photo,lastLogin,userPlatform, privacy}=req.body;
-        console.log(groupname,grouptype,email,photo,lastLogin,userPlatform, privacy)
-        if (groupname&&grouptype&&email) {
-            pool.query('INSERT INTO groups (groupname,grouptype,email,lastLogin,userPlatform,privacy,photo) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [groupname,grouptype,email,lastLogin,userPlatform,privacy,photo], (error:any, results) => {
+        const {groupname,grouptype,email,photo,lastLogin,userPlatform, privacy}=req.body.data;
+        const request=await axios.post(`${process.env.API_URL}/drive/create/${groupname}`,{},{
+            headers:{
+                Authorization:`${req.body.access_token}`,
+            }
+        })
+        const folderId=request.data.id
+        if (folderId&&groupname&&grouptype&&email){
+            pool.query('INSERT INTO groups (groupname,grouptype,email,lastLogin,userPlatform,privacy,photo,folder_id) VALUES ($1, $2, $3, $4, $5, $6, $7,$8) RETURNING *', [groupname,grouptype,email,lastLogin,userPlatform,privacy,photo,folderId], (error:any, results) => {
                 let group_results=results.rows[0]
                 if (error) {
                     res.status(408).send({error:`Account using ${email} already exist!`})
                 }else{
-                    pool.query('UPDATE users SET group_ownership = $1 WHERE email = $2 RETURNING *',[group_results.groupname,group_results.email],(error,results)=>{
+                    pool.query('UPDATE users SET group_ownership = $1, group_folder_id=$2 WHERE email = $3 RETURNING *',[group_results.groupname,folderId,group_results.email],(error,results)=>{
                         if(error){
                             console.log(error)
                         }else{
@@ -24,7 +29,7 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
                     })
                 }
             })   
-        } else {
+        }else{
             res.status(403).send({error:"Fill all the required fields!!"})
         }
     } catch (error:any) {
@@ -34,7 +39,7 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
 
 export const loginGroup=async(req:ReqGroup,res:any)=>{
     try {
-        const {email,lastLogin,userPlatform}=req.body;
+        const {email,lastLogin,userPlatform}=req.body.data;
         if(email &&lastLogin&&userPlatform){
             pool.query('SELECT * FROM groups WHERE email = $1',[email],async (error,results)=>{
                 if(error){
@@ -82,6 +87,7 @@ export const getGroupDetails=async(req:ReqGroup,res:any)=>{
                             groupname:results.rows[0].groupname,
                             email:results.rows[0].email,
                             photo:results.rows[0].photo,
+                            folder_id:results.rows[0].folder_id,
                             privacy:results.rows[0].privacy,
                             grouptype:results.rows[0].grouptype
                         }
@@ -98,52 +104,62 @@ export const getGroupDetails=async(req:ReqGroup,res:any)=>{
 
 export const deleteGroup=async(req:ReqGroup,res:any)=>{ 
     try {
-        const email = req.params.email
-        pool.query('DELETE FROM group_uploads WHERE email = $1 RETURNING *', [email], (error, results) => {
-            if (error) {
-                res.status(408).send({error:`Failed to delete shared files associated with the email ${email}`})
-            }else{
-                if (results.rows) {
-                    pool.query('DELETE FROM groups WHERE email = $1 RETURNING *', [email], (error, results) => {
-                        if (error) {
-                            res.status(408).send({error:`Failed to delete group associated with the email ${email}`})
-                        }else{
-                            let group_results=results.rows[0]
-                            if (group_results) {
-                                pool.query('UPDATE users SET group_ownership = null WHERE email = $1 RETURNING *', [email], (error, results) => {
-                                    if (error) {
-                                        res.status(408).send({error:`Failed to remove group_ownership from user, ${email}`})
-                                    }else{
-                                        let mailTranporter=createTransport({
-                                            service:'gmail',
-                                            auth:{
-                                                user:process.env.TRANSPORTER,
-                                                pass:process.env.PASSWORD
-                                            }
-                                        });
-                                        let details:MailDetails={
-                                            from:process.env.TRANSPORTER,
-                                            to:group_results.email,
-                                            subject:`Your Group Account Was Deleted`,
-                                            text:`Hello ${group_results.groupname},\n Your Group was deleted. We are sorry to see your leave, see you again at https://wekafile.web.app/.\n\nFeel free to share your feedback by replying to this email.`
-                                        }
-                                        mailTranporter.sendMail(details,(err:any)=>{
-                                            if(err){
-                                                res.send({error:`Cannot sent email, try again!`});
-                                            } else{
-                                                res.status(200).send({msg:`Group associated with email ${group_results.email} deteled successful`})
-                                            }
-                                        }) 
-                                    }
-                                })
-                            } else {
-                                res.status(404).send({error:`Group associated with email ${email} does not exist!`})
-                            }
-                        }
-                    })
-                }
+        const {email,folder_id} = req.params
+        const response=await axios.delete(`${process.env.API_URL}/drive/delete/${folder_id}`,{
+            headers:{
+                Authorization:`${req.body.access_token}`,
             }
         })
+        const folderId=response.data.id
+        if (folderId) {
+            pool.query('DELETE FROM group_uploads WHERE email = $1 RETURNING *', [email], (error, results) => {
+                if (error) {
+                    res.status(408).send({error:`Failed to delete shared files associated with the email ${email}`})
+                }else{
+                    if (results.rows) {
+                        pool.query('DELETE FROM groups WHERE email = $1 RETURNING *', [email], (error, results) => {
+                            if (error) {
+                                res.status(408).send({error:`Failed to delete group associated with the email ${email}`})
+                            }else{
+                                let group_results=results.rows[0]
+                                if (group_results) {
+                                    pool.query('UPDATE users SET group_ownership = null WHERE email = $1 RETURNING *', [email], (error, results) => {
+                                        if (error) {
+                                            res.status(408).send({error:`Failed to remove group_ownership from user, ${email}`})
+                                        }else{
+                                            let mailTranporter=createTransport({
+                                                service:'gmail',
+                                                auth:{
+                                                    user:process.env.TRANSPORTER,
+                                                    pass:process.env.PASSWORD
+                                                }
+                                            });
+                                            let details:MailDetails={
+                                                from:process.env.TRANSPORTER,
+                                                to:group_results.email,
+                                                subject:`Your Group Account Was Deleted`,
+                                                text:`Hello ${group_results.groupname},\n Your Group was deleted. We are sorry to see your leave, see you again at https://wekafile.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+                                            }
+                                            mailTranporter.sendMail(details,(err:any)=>{
+                                                if(err){
+                                                    res.send({error:`Cannot sent email, try again!`});
+                                                } else{
+                                                    res.status(200).send({msg:`Group associated with email ${group_results.email} deteled successful`})
+                                                }
+                                            }) 
+                                        }
+                                    })
+                                } else {
+                                    res.status(404).send({error:`Group associated with email ${email} does not exist!`})
+                                }
+                            }
+                        })
+                    }
+                }
+            })
+        }else{
+            res.status(404).send({error:`Try again later!!`})
+        }
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
@@ -186,21 +202,21 @@ export const giveAccess=async(req:any,res:any)=>{
 export const deleteSharedFile=async(req:any,res:any)=>{
     try {
         const filename=req.params.filename
-        pool.query('DELETE FROM group_uploads WHERE filename = $1 RETURNING *',[filename],(error,results)=>{
+        pool.query('DELETE FROM group_uploads WHERE filename = $1 RETURNING *',[filename],async(error,results)=>{
             if (error) {
                 res.status(408).send({error:`Failed to delete file ${filename.slice(0,25)}...`})
             }else{
                 if (results.rows[0]) {
-                    if (existsSync(results.rows[0].file)) {
-                        // The file exists, so you can proceed with deleting it
-                        try {
-                            unlinkSync(results.rows[0].file)
-                            res.status(200).send({msg:`You've successfully deleted ${filename.slice(0,25)}...`})
-                        } catch (err:any) {
-                            res.status(404).send({error:err.message})
+                    const response=await axios.delete(`${process.env.API_URL}/drive/delete/file/${results.rows[0].file}`,{
+                        headers:{
+                            Authorization:`${req.body.access_token}`,
                         }
+                    })
+                    const fileId=response.data.id
+                    if (fileId) {
+                        res.status(200).send({msg:`You've successfully deleted ${filename.slice(0,25)}...`})
                     } else {
-                        console.log('File not found')
+                        res.status(404).send({error:`${filename.slice(0,25)} not found`})
                     }
                 }
             }

@@ -3,11 +3,11 @@ import { createTransport } from "nodemailer"
 import { MailDetails, Req } from "../types/types";
 import {genSalt, compare, hash} from "bcryptjs";
 import { verify, sign } from "jsonwebtoken"
-import { unlinkSync, existsSync } from "fs"
+import axios from "axios"
 
 export const verifyEmail=async(req:Req,res:any)=>{
     try {
-        const email=req.body.email;
+        const email=req.body.data.email;
         const code=createCode()
         pool.query('SELECT * FROM users WHERE email = $1', [email], (error, results) => {
             if (!results.rows[0]) {
@@ -42,26 +42,40 @@ export const verifyEmail=async(req:Req,res:any)=>{
 
 export const registerUser=async(req:Req,res:any)=>{
     try {
-        const {username,email,password,lastLogin,userPlatform}=req.body;
+        const {username,email,password,lastLogin,userPlatform}=req.body.data;
         if (username&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [`@${username}`, email, hashedPassword, lastLogin, userPlatform], (error:any, results) => {
-                if (error) {
-                    res.status(408).send({error:`Account using ${email} already exist!`})
-                }else{
-                    res.status(201).send({
-                        msg:`Welcome ${results.rows[0].username}`,
-                        data:{
-                            id:results.rows[0].id,
-                            username:results.rows[0].username,
-                            email:results.rows[0].email,
-                            photo:results.rows[0].photo,
-                            token:generateUserToken(results.rows[0].id)
-                        }
-                    })
+            const request=await axios.post(`${process.env.API_URL}/drive/create/${username}`,{},{
+                headers:{
+                    Authorization:`${req.body.access_token}`,
                 }
-            })    
+            })
+            const folderId=request.data.id
+            if (folderId){
+                pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform, folder_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [`@${username}`, email, hashedPassword, lastLogin, userPlatform, folderId], async(error:any, results) => {
+                    if (error) {
+                        res.status(408).send({error:`Account using ${email} already exist!`})
+                    }else{
+                        res.status(201).send({
+                            msg:`Welcome ${results.rows[0].username}`,
+                            data:{
+                                id:results.rows[0].id,
+                                username:results.rows[0].username,
+                                email:results.rows[0].email,
+                                photo:results.rows[0].photo,
+                                group_folder_id:results.rows[0].group_folder_id,
+                                folder_id:results.rows[0].folder_id,
+                                token:generateUserToken(results.rows[0].id)
+                            }
+                        })
+                    }
+                })
+            }else{
+                res.status(201).send({
+                    error:"Failed to create a folder"
+                })
+            }
         } else {
             res.status(403).send({error:"Fill all the required fields!!"})
         }
@@ -72,7 +86,7 @@ export const registerUser=async(req:Req,res:any)=>{
 
 export const loginUser=async(req:Req,res:any)=>{
     try {
-        const {email,password,lastLogin,userPlatform}=req.body;
+        const {email,password,lastLogin,userPlatform}=req.body.data;
         if(email&&password&&lastLogin&&userPlatform){
             pool.query('SELECT * FROM users WHERE email = $1',[email],async (error,results)=>{
                 if(error){
@@ -91,6 +105,8 @@ export const loginUser=async(req:Req,res:any)=>{
                                             id:results.rows[0].id,
                                             username:results.rows[0].username,
                                             email:results.rows[0].email,
+                                            folder_id:results.rows[0].folder_id,
+                                            group_folder_id:results.rows[0].group_folder_id,
                                             photo:results.rows[0].photo,
                                             token:generateUserToken(results.rows[0].id)
                                         }
@@ -131,7 +147,7 @@ export const getUsers=async(req:Req,res:any)=>{
 export const updateUser=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
-        const { username, old_password,password, photo } = req.body
+        const { username, old_password,password, photo } = req.body.data
         if(username&&password&&photo){
             //update username, password and photo
             pool.query(
@@ -338,7 +354,6 @@ export const updateUser=async(req:Req,res:any)=>{
                     }
             })
         }
-        
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
@@ -358,7 +373,8 @@ export const getUserDetails=async(req:Req,res:any)=>{
                             username:results.rows[0].username,
                             email:results.rows[0].email,
                             photo:results.rows[0].photo,
-                            group_ownership:results.rows[0].group_ownership
+                            group_ownership:results.rows[0].group_ownership,
+                            group_folder_id:results.rows[0].group_folder_id,
                         }
                     })
                 }else{
@@ -433,45 +449,55 @@ export const postMyUploads=async(req:any,res:any)=>{
 
 export const deleteUser=async(req:Req,res:any)=>{
     try {
-        const email = req.params.email
+        const {email,folder_id} = req.params
         pool.query(`
         DELETE FROM user_uploads WHERE email=$1 RETURNING *
-        `, [email], (error, results) => {
+        `, [email], async(error, results) => {
             if (error) {
                 res.status(408).send({error:`Failed to delete uploads associated with the email ${email}`})
                 console.log(error)
             }else{
                 if (results.rows) {
-                    pool.query('DELETE FROM users WHERE email = $1 RETURNING *', [email], (error, results) => {
-                        if (error) {
-                            res.status(408).send({error:`Failed to delete account associated with the email ${email}`})
-                        }else{
-                            if (results.rows[0]) {
-                                let mailTranporter=createTransport({
-                                    service:'gmail',
-                                    auth:{
-                                        user:process.env.TRANSPORTER,
-                                        pass:process.env.PASSWORD
-                                    }
-                                });
-                                let details:MailDetails={
-                                    from:process.env.TRANSPORTER,
-                                    to:results.rows[0].email,
-                                    subject:`Your Account Was Deleted`,
-                                    text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://wekafile.web.app/.\n\nFeel free to share your feedback by replying to this email.`
-                                }
-                                mailTranporter.sendMail(details,(err:any)=>{
-                                    if(err){
-                                        res.send({error:`Cannot sent email, try again!`});
-                                    } else{
-                                        res.status(200).send({msg:`Account associated with email ${results.rows[0].email} deteled successful`})
-                                    }
-                                })   
-                            } else {
-                                res.status(404).send({error:`Account associated with email ${email} does not exist!`})
-                            }
+                    const response=await axios.delete(`${process.env.API_URL}/drive/delete/${folder_id}`,{
+                        headers:{
+                            Authorization:`${req.body.access_token}`,
                         }
                     })
+                    const folderId=response.data.id
+                    if (folderId) {
+                        pool.query('DELETE FROM users WHERE email = $1 RETURNING *', [email], (error, results) => {
+                            if (error) {
+                                res.status(408).send({error:`Failed to delete account associated with the email ${email}`})
+                            }else{
+                                if (results.rows[0]) {
+                                    let mailTranporter=createTransport({
+                                        service:'gmail',
+                                        auth:{
+                                            user:process.env.TRANSPORTER,
+                                            pass:process.env.PASSWORD
+                                        }
+                                    });
+                                    let details:MailDetails={
+                                        from:process.env.TRANSPORTER,
+                                        to:results.rows[0].email,
+                                        subject:`Your Account Was Deleted`,
+                                        text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://wekafile.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+                                    }
+                                    mailTranporter.sendMail(details,(err:any)=>{
+                                        if(err){
+                                            res.send({error:`Cannot sent email, try again!`});
+                                        } else{
+                                            res.status(200).send({msg:`Account associated with email ${results.rows[0].email} deteled successful`})
+                                        }
+                                    })   
+                                } else {
+                                    res.status(404).send({error:`Account associated with email ${email} does not exist!`})
+                                }
+                            }
+                        })
+                    } else {
+                        res.status(404).send({error:'Try again later,'})
+                    }
                 }
             }
         })
@@ -517,21 +543,21 @@ export const giveAccessToUpload=async(req:any,res:any)=>{
 export const deleteUploadFile=async(req:any,res:any)=>{
     try {
         const filename=req.params.filename
-        pool.query('DELETE FROM user_uploads WHERE filename = $1 RETURNING *',[filename],(error,results)=>{
+        pool.query('DELETE FROM user_uploads WHERE filename = $1 RETURNING *',[filename],async(error,results)=>{
             if (error) {
                 res.status(408).send({error:`Failed to delete file ${filename.slice(0,25)}...`})
             }else{
                 if (results.rows[0]) {
-                    if (existsSync(results.rows[0].file)) {
-                        // The file exists, so you can proceed with deleting it
-                        try {
-                            unlinkSync(results.rows[0].file)
-                            res.status(200).send({msg:`You've successfully deleted ${filename.slice(0,25)}...`})
-                        } catch (err:any) {
-                            res.status(404).send({error:err.message})
+                    const response=await axios.delete(`${process.env.API_URL}/drive/delete/file/${results.rows[0].file}`,{
+                        headers:{
+                            Authorization:`${req.body.access_token}`,
                         }
+                    })
+                    const fileId=response.data.id
+                    if (fileId) {
+                        res.status(200).send({msg:`You've successfully deleted ${filename.slice(0,25)}...`})
                     } else {
-                        console.log('File not found')
+                        res.status(404).send({error:`${filename.slice(0,25)} not found`})
                     }
                 }
             }

@@ -59,39 +59,66 @@ drive.get('/google/redirect',async(req:any,res:any)=>{
 });
 
 //upload file
-drive.post('/upload',handleAuth,async(req:any, res:any) => {
+drive.post('/upload/:type/:folder_id',handleAuth,async(req:any, res:any) => {
     try {
+        const {folder_id,type}=req.params
         var form =formidable({
             keepExtensions:true,
-            maxFileSize:5 * 1024 * 1024 //5mbs
+            maxFileSize:10 * 1024 * 1024 //5mbs
         });
         form.parse(req)
         form.on('file',async(name:any, files:any) => {
             const fileMetadata = {
                 name: files.originalFilename,
+                parents: [folder_id],
             };
             const media = {
                 mimeType: files.mimetype,
                 body: createReadStream(files.filepath),
             };
-            pool.query('SELECT * FROM user_uploads WHERE filename = $1',[files.originalFilename],async (error,results)=>{
-                if(error){
-                    console.log(error)
-                    res.status(400).send({error:'Failed upload file'})
-                }else{
-                    if(!results.rows){
-                        const response=await service.files.create(
-                            {
-                                resource: fileMetadata,
-                                media: media,
-                                fields: "id",
-                            }
-                        );
-                        console.log(`${files.originalFilename} uploaded to drive`);
-                        res.send({id:response.data.id});
+            if(type==='users'){
+                pool.query('SELECT * FROM user_uploads WHERE filename = $1',[files.originalFilename],async (error,results)=>{
+                    if(error){
+                        console.log(error)
+                        res.status(400).send({error:'Failed upload file'})
+                    }else{
+                        if(!results.rows[0]){
+                            const response=await service.files.create(
+                                {
+                                    resource: fileMetadata,
+                                    media: media,
+                                    fields: "id",
+                                }
+                            );
+                            console.log(`${files.originalFilename} uploaded to folder ${folder_id} in drive`);
+                            res.send({id:response.data.id});
+                        }else{
+                          res.send({error:`${files.originalFilename} exist`})
+                        }
                     }
-                }
-            })
+                })
+            }else if(type==='groups'){
+                pool.query('SELECT * FROM group_uploads WHERE filename = $1',[files.originalFilename],async (error,results)=>{
+                    if(error){
+                        console.log(error)
+                        res.status(400).send({error:'Failed upload file'})
+                    }else{
+                        if(!results.rows[0]){
+                            const response=await service.files.create(
+                                {
+                                    resource: fileMetadata,
+                                    media: media,
+                                    fields: "id",
+                                }
+                            );
+                            console.log(`${files.originalFilename} uploaded to drive`);
+                            res.send({id:response.data.id});
+                        }else{
+                          res.send({error:`${files.originalFilename} exists`})
+                        }
+                    }
+                })
+            }
         });
     } catch (error:any) {
         res.status(500).send({error:error.message})
@@ -99,7 +126,7 @@ drive.post('/upload',handleAuth,async(req:any, res:any) => {
 });
 
 //delete drive file
-drive.delete('/delete/:id',handleAuth,async(req:any, res:any) => {
+drive.delete('/delete/file/:id',handleAuth,async(req:any, res:any) => {
   try {
     var fileId = req.params.id;
     const response=await service.files.delete({ 'fileId': fileId })
@@ -109,23 +136,54 @@ drive.delete('/delete/:id',handleAuth,async(req:any, res:any) => {
   }
 });
 
-// app.post('/download/:id', (req, res) => {
-//     if (req.body.token == null) return res.status(400).send('Token not found');
-//     oAuth2Client.setCredentials(req.body.token);
-//     const drive = google.drive({ version: 'v3', auth: oAuth2Client });
-//     var fileId = req.params.id;
-//     drive.files.get({ fileId: fileId, alt: 'media' }, { responseType: 'stream' },
-//         function (err, response) {
-//             response.data
-//                 .on('end', () => {
-//                     console.log('Done');
-//                 })
-//                 .on('error', err => {
-//                     console.log('Error', err);
-//                 })
-//                 .pipe(res);
-//         }
-//     );
-// })
+//delete drive folder
+drive.delete('/delete/:folder_id',handleAuth,async(req:any, res:any) => {
+    try {
+        const folderId=req.params.folder_id
+        const response=await service.files.delete({ 
+            parent:[folderId],
+            fields: "id",
+        })
+        res.send({id:response.data.id})
+    } catch (error:any) {
+      res.status(500).send({error:error.message})
+    }
+});
+
+//create drive folder
+drive.post('/create/:name',handleAuth,async(req:any, res:any) => {
+    try {
+        var name = req.params.name;
+        const fileMetadata = {
+            name: `wekafile_${name}`,
+            mimeType: 'application/vnd.google-apps.folder',
+        };
+        const response = await service.files.create({
+            resource: fileMetadata,
+            fields: 'id',
+        });
+        console.log('Folder Id:', response.data.id);
+        res.send({id:response.data.id})
+    } catch (error:any) {
+      res.status(500).send({error:error.message})
+    }
+});
+  
+
+drive.post('/download/:id', handleAuth,(req, res) => {
+    var fileId = req.params.id;
+    service.files.get({ fileId: fileId, alt: 'media' }, { responseType: 'stream' },
+        function (err:any, response:any) {
+            response.data
+                .on('end', () => {
+                    console.log('Done');
+                })
+                .on('error', (err:any) => {
+                    console.log('Error', err);
+                })
+                .pipe(res);
+        }
+    );
+})
 
 export default drive

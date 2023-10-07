@@ -1,8 +1,11 @@
 -- Add up migration script here
 create table users(
     email varchar not null primary key,
+    folder_id varchar not null,
+    group_folder_id varchar,
     username varchar not null,
     password varchar not null,
+    provider varchar,
     photo varchar,
     lastLogin varchar,
     ipAddress varchar,
@@ -28,7 +31,9 @@ create index user_uploads_idx on user_uploads (email);
 create table groups(
     email varchar not null primary key,
     groupname varchar not null unique,
+    folder_id varchar not null,
     grouptype varchar not null,
+    provider varchar,
     photo varchar,
     privacy boolean,
     lastLogin varchar,
