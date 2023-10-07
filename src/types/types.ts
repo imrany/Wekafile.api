@@ -6,35 +6,43 @@ export interface MailDetails{
 }
 export interface Req{
     body:{
-        username:string,
-        email:string,
-        old_password:string,
-        password:string,
-        lastLogin:string,
-        userPlatform:string,
-        photo:string
+        data:{
+            username:string,
+            email:string,
+            old_password:string,
+            password:string,
+            lastLogin:string,
+            userPlatform:string,
+            photo:string
+        },
+        access_token:string
     },
     params:{
         email:string,
+        folder_id:string,
         id:string
     }
 }
 
 export interface ReqGroup{
     body:{
-        groupname:string,
-        email:string,
-        password:string,
-        lastLogin:string,
-        userPlatform:string,
-        photo:string,
-        grouptype:string,
-        privacy:boolean,
-        ipAddress:string,
-        members :string[]
+        access_token:string,
+        data:{
+            groupname:string,
+            email:string,
+            password:string,
+            lastLogin:string,
+            userPlatform:string,
+            photo:string,
+            grouptype:string,
+            privacy:boolean,
+            ipAddress:string,
+            members :string[]
+        }
     },
     params:{
         email:string,
+        folder_id:string,
         id:string
     }
 }
