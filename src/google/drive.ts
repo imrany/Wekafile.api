@@ -22,7 +22,7 @@ const handleAuth=async(req:any,res:any,next:any)=>{
     if(req.headers.authorization){
         try{
             token=req.headers.authorization
-            oauth2Client.setCredentials(JSON.parse(token))
+            await oauth2Client.setCredentials(JSON.parse(token))
             next()
         }catch (error:any){
             res.status(401).send({error:'Not Authorised☠'})
