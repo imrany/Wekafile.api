@@ -163,15 +163,16 @@ drive.post('/create/:name',handleAuth,async(req:any, res:any) => {
             fields: 'id',
         });
         console.log('Folder Id:', response.data.id);
+        res.send({id:response.data.id})
         await service.permissions.create({
-          parents:[response.data.id],
+          'fileId':response.data.id,
           requestBody:{
             role:"reader",
             type:"anyone"
           }
         })
-        res.send({id:response.data.id})
     } catch (error:any) {
+      console.log(error)
       res.status(500).send({error:error.message})
     }
 });
