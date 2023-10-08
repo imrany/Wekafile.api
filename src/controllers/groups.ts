@@ -165,7 +165,7 @@ export const deleteGroup=async(req:ReqGroup,res:any)=>{
     }
 }
 
-export const giveAccess=async(req:any,res:any)=>{
+export const giveGroupAccess=async(req:any,res:any)=>{
     try {
         const email = req.params.email
         const {filename,allowedEmail}=req.body

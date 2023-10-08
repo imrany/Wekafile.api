@@ -141,10 +141,10 @@ drive.delete('/delete/:folder_id',handleAuth,async(req:any, res:any) => {
     try {
         const folderId=req.params.folder_id
         const response=await service.files.delete({ 
-            parent:[folderId],
+            "fileId":folderId,
             fields: "id",
         })
-        res.send({id:response.data.id})
+        res.send({id:`${folderId} was deleted`})
     } catch (error:any) {
       res.status(500).send({error:error.message})
     }
@@ -163,6 +163,13 @@ drive.post('/create/:name',handleAuth,async(req:any, res:any) => {
             fields: 'id',
         });
         console.log('Folder Id:', response.data.id);
+        await service.permissions.create({
+          parents:[response.data.id],
+          requestBody:{
+            role:"reader",
+            type:"anyone"
+          }
+        })
         res.send({id:response.data.id})
     } catch (error:any) {
       res.status(500).send({error:error.message})

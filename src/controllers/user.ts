@@ -359,6 +359,40 @@ export const updateUser=async(req:Req,res:any)=>{
     }
 }
 
+export const giveAccess=async(req:any,res:any)=>{
+    try {
+        const email = req.params.email
+        const {filename,allowedEmail}=req.body
+        pool.query('SELECT * FROM users WHERE email = $1', [allowedEmail], (error, results) => {
+            if (results.rows) {
+                pool.query('SELECT * FROM user_uploads WHERE email = $1 AND filename=$2',[email,filename],(error,result)=>{
+                    if(error){
+                        console.log({error:error})
+                    }else{
+                        if (result.rows[0]) {
+                            pool.query('UPDATE user_uploads SET allowedEmails = ARRAY_APPEND(allowedEmails,$1) WHERE filename = $2',[allowedEmail,filename], (error, results) => {
+                                if(error){
+                                    console.log(error)
+                                    res.send({error:"Cannot give access!!"})
+                                }else{
+                                    res.send({msg:`Access created`})
+                                }
+                            })
+                        } else {
+                            res.status(404).send({error:`Not Found`})
+                        }
+                    }
+                })
+                
+            }else{
+                res.send({error:`User using ${allowedEmail} does not exist!`})
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
+
 export const getUserDetails=async(req:Req,res:any)=>{
     try {
         const email = req.params.email
@@ -370,11 +404,14 @@ export const getUserDetails=async(req:Req,res:any)=>{
                 if(results.rows[0]){
                     res.status(200).json({
                         data:{
+                            id:results.rows[0].id,
                             username:results.rows[0].username,
                             email:results.rows[0].email,
-                            photo:results.rows[0].photo,
-                            group_ownership:results.rows[0].group_ownership,
+                            folder_id:results.rows[0].folder_id,
                             group_folder_id:results.rows[0].group_folder_id,
+                            group_ownership:results.rows[0].group_ownership,
+                            photo:results.rows[0].photo,
+                            token:generateUserToken(results.rows[0].id)
                         }
                     })
                 }else{
@@ -458,45 +495,49 @@ export const deleteUser=async(req:Req,res:any)=>{
                 console.log(error)
             }else{
                 if (results.rows) {
-                    const response=await axios.delete(`${process.env.API_URL}/drive/delete/${folder_id}`,{
-                        headers:{
-                            Authorization:`${req.body.access_token}`,
-                        }
-                    })
-                    const folderId=response.data.id
-                    if (folderId) {
-                        pool.query('DELETE FROM users WHERE email = $1 RETURNING *', [email], (error, results) => {
-                            if (error) {
-                                res.status(408).send({error:`Failed to delete account associated with the email ${email}`})
-                            }else{
-                                if (results.rows[0]) {
-                                    let mailTranporter=createTransport({
-                                        service:'gmail',
-                                        auth:{
-                                            user:process.env.TRANSPORTER,
-                                            pass:process.env.PASSWORD
-                                        }
-                                    });
-                                    let details:MailDetails={
-                                        from:process.env.TRANSPORTER,
-                                        to:results.rows[0].email,
-                                        subject:`Your Account Was Deleted`,
-                                        text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://wekafile.web.app/.\n\nFeel free to share your feedback by replying to this email.`
-                                    }
-                                    mailTranporter.sendMail(details,(err:any)=>{
-                                        if(err){
-                                            res.send({error:`Cannot sent email, try again!`});
-                                        } else{
-                                            res.status(200).send({msg:`Account associated with email ${results.rows[0].email} deteled successful`})
-                                        }
-                                    })   
-                                } else {
-                                    res.status(404).send({error:`Account associated with email ${email} does not exist!`})
-                                }
+                    try{
+                        const response=await axios.delete(`${process.env.API_URL}/drive/delete/${folder_id}`,{
+                            headers:{
+                                Authorization:`${req.body.access_token}`,
                             }
                         })
-                    } else {
-                        res.status(404).send({error:'Try again later,'})
+                        const folderId=response.data.id
+                        if (folderId) {
+                            pool.query('DELETE FROM users WHERE email = $1 RETURNING *', [email], (error, results) => {
+                                if (error) {
+                                    res.status(408).send({error:`Failed to delete account associated with the email ${email}`})
+                                }else{
+                                    if (results.rows[0]) {
+                                        let mailTranporter=createTransport({
+                                            service:'gmail',
+                                            auth:{
+                                                user:process.env.TRANSPORTER,
+                                                pass:process.env.PASSWORD
+                                            }
+                                        });
+                                        let details:MailDetails={
+                                            from:process.env.TRANSPORTER,
+                                            to:results.rows[0].email,
+                                            subject:`Your Account Was Deleted`,
+                                            text:`Hello ${results.rows[0].username},\n Your Account was deleted. We are sorry to see your leave, see you again at https://wekafile.web.app/.\n\nFeel free to share your feedback by replying to this email.`
+                                        }
+                                        mailTranporter.sendMail(details,(err:any)=>{
+                                            if(err){
+                                                res.send({error:`Cannot sent email, try again!`});
+                                            } else{
+                                                res.status(200).send({msg:`Account associated with email ${results.rows[0].email} deteled successful`})
+                                            }
+                                        })   
+                                    } else {
+                                        res.status(404).send({error:`Account associated with email ${email} does not exist!`})
+                                    }
+                                }
+                            })
+                        } else {
+                            res.status(404).send({error:'Try again later,'})
+                        }
+                    }catch(error:any){
+                        res.status(404).send({error:error.data.error})
                     }
                 }
             }
