@@ -144,10 +144,10 @@ export const getUsers=async(req:Req,res:any)=>{
     }
 }
 
-export const updateUser=async(req:Req,res:any)=>{
+export const updateUser=async(req:any,res:any)=>{
     try {
         const email = req.params.email
-        const { username, old_password,password, photo } = req.body.data
+        const { username, old_password,password, photo } = req.body
         if(username&&password&&photo){
             //update username, password and photo
             pool.query(
@@ -158,6 +158,7 @@ export const updateUser=async(req:Req,res:any)=>{
                         console.log(error)
                         res.status(501).send({error:`Failed to update account username, password and photo`})
                     }else{
+                        res.status(200).send({msg:`Username, password and photo updated successful`})
                         let mailTranporter=createTransport({
                             service:'gmail',
                             auth:{
@@ -173,9 +174,7 @@ export const updateUser=async(req:Req,res:any)=>{
                         }
                         mailTranporter.sendMail(details,(err:any)=>{
                             if(err){
-                                res.send({error:`Cannot sent email, try again!`});
-                            } else{
-                                res.status(200).send({msg:`Username, password and photo updated successful`})
+                                console.log({error:`Cannot sent email, try again!`});
                             }
                         })
                     }
@@ -190,6 +189,7 @@ export const updateUser=async(req:Req,res:any)=>{
                         console.log(error)
                         res.status(501).send({error:`Failed to update account username and password`})
                     }else{
+                        res.status(200).send({msg:`Username and password updated successful`})
                         let mailTranporter=createTransport({
                             service:'gmail',
                             auth:{
@@ -205,9 +205,7 @@ export const updateUser=async(req:Req,res:any)=>{
                         }
                         mailTranporter.sendMail(details,(err:any)=>{
                             if(err){
-                                res.send({error:`Cannot sent email, try again!`});
-                            } else{
-                                res.status(200).send({msg:`Username and password updated successful`})
+                                console.log({error:`Cannot sent email, try again!`});
                             }
                         })
                     }
@@ -222,6 +220,7 @@ export const updateUser=async(req:Req,res:any)=>{
                         console.log(error)
                         res.status(501).send({error:`Failed to update account username and photo`})
                     }else{
+                        res.status(200).send({msg:`Username and photo updated successful`})
                         let mailTranporter=createTransport({
                             service:'gmail',
                             auth:{
@@ -237,9 +236,7 @@ export const updateUser=async(req:Req,res:any)=>{
                         }
                         mailTranporter.sendMail(details,(err:any)=>{
                             if(err){
-                                res.send({error:`Cannot sent email, try again!`});
-                            } else{
-                                res.status(200).send({msg:`Username and photo updated successful`})
+                                console.log({error:`Cannot sent email, try again!`});
                             }
                         })
                     }
@@ -254,6 +251,7 @@ export const updateUser=async(req:Req,res:any)=>{
                         console.log(error)
                         res.status(501).send({error:`Failed to update account photo`})
                     }else{
+                        res.status(200).send({msg:`Photo updated`})
                         let mailTranporter=createTransport({
                             service:'gmail',
                             auth:{
@@ -269,9 +267,7 @@ export const updateUser=async(req:Req,res:any)=>{
                         }
                         mailTranporter.sendMail(details,(err:any)=>{
                             if(err){
-                                res.send({error:`Cannot sent email, try again!`});
-                            } else{
-                                res.status(200).send({msg:`Photo updated`})
+                                console.log({error:`Cannot sent email, try again!`});
                             }
                         })
                     }
@@ -294,6 +290,7 @@ export const updateUser=async(req:Req,res:any)=>{
                                     console.log(error)
                                     res.status(501).send({error:`Failed to update password`})
                                 }else{
+                                    res.status(200).send({msg:`Password updated`})
                                     let mailTranporter=createTransport({
                                         service:'gmail',
                                         auth:{
@@ -309,9 +306,7 @@ export const updateUser=async(req:Req,res:any)=>{
                                     }
                                     mailTranporter.sendMail(details,(err:any)=>{
                                         if(err){
-                                            res.send({error:`Cannot sent email, try again!`});
-                                        } else{
-                                            res.status(200).send({msg:`Password updated`})
+                                            console.log({error:`Cannot sent email, try again!`});
                                         }
                                     })
                                 }
@@ -331,6 +326,7 @@ export const updateUser=async(req:Req,res:any)=>{
                         console.log(error)
                         res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
                     }else{
+                        res.status(200).send({msg:`Account details updated successful`})
                         let mailTranporter=createTransport({
                             service:'gmail',
                             auth:{
@@ -346,9 +342,7 @@ export const updateUser=async(req:Req,res:any)=>{
                         }
                         mailTranporter.sendMail(details,(err:any)=>{
                             if(err){
-                                res.send({error:`Cannot sent email, try again!`});
-                            } else{
-                                res.status(200).send({msg:`Account details updated successful`})
+                                console.log({error:`Cannot sent email, try again!`});
                             }
                         })
                     }
