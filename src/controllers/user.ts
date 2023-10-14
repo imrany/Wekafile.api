@@ -40,42 +40,60 @@ export const verifyEmail=async(req:Req,res:any)=>{
     }
 }
 
+export const createUserUploadFolder=async(req:Req,res:any)=>{
+    try{
+        const email=req.params.email
+        const {username}=req.body.data;
+        const request=await axios.post(`${process.env.API_URL}/drive/create/${username}`,{},{
+            headers:{
+                Authorization:`${req.body.access_token}`,
+            }
+        })
+        const folderId=request.data.id
+        if (folderId){
+            pool.query('UPDATE users SET folder_id = $1 WHERE email = $2 AND username=$3',[folderId,email,username], (error, results) => {
+                if(error){
+                    console.log(error)
+                    res.send({error:"Failed to create a folder!!"})
+                }else{
+                    res.send({msg:`Upload folder created successfull`})
+                }
+            })
+        }else{
+            res.status(201).send({
+                error:"Failed to create a folder!!"
+            })
+        }
+    }catch(error:any){
+        res.status(500).send({error:error.message})
+    }
+}
+
 export const registerUser=async(req:Req,res:any)=>{
     try {
         const {username,email,password,lastLogin,userPlatform}=req.body.data;
         if (username&&email&&password) {
             const salt=await genSalt(10);
             const hashedPassword=await hash(password,salt);
-            const request=await axios.post(`${process.env.API_URL}/drive/create/${username}`,{},{
-                headers:{
-                    Authorization:`${req.body.access_token}`,
+            pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform) VALUES ($1, $2, $3, $4, $5) RETURNING *', [`@${username}`, email, hashedPassword, lastLogin, userPlatform], async(error:any, results) => {
+                if (error) {
+                    res.status(408).send({error:`Account using ${email} already exist!`})
+                }else{
+                    res.status(201).send({
+                        msg:`Welcome ${results.rows[0].username}`,
+                        data:{
+                            id:results.rows[0].id,
+                            username:results.rows[0].username,
+                            email:results.rows[0].email,
+                            photo:results.rows[0].photo,
+                            group_folder_id:results.rows[0].group_folder_id,
+                            folder_id:results.rows[0].folder_id,
+                            token:generateUserToken(results.rows[0].id)
+                        }
+                    })
                 }
             })
-            const folderId=request.data.id
-            if (folderId){
-                pool.query('INSERT INTO users (username, email, password, lastLogin, userPlatform, folder_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [`@${username}`, email, hashedPassword, lastLogin, userPlatform, folderId], async(error:any, results) => {
-                    if (error) {
-                        res.status(408).send({error:`Account using ${email} already exist!`})
-                    }else{
-                        res.status(201).send({
-                            msg:`Welcome ${results.rows[0].username}`,
-                            data:{
-                                id:results.rows[0].id,
-                                username:results.rows[0].username,
-                                email:results.rows[0].email,
-                                photo:results.rows[0].photo,
-                                group_folder_id:results.rows[0].group_folder_id,
-                                folder_id:results.rows[0].folder_id,
-                                token:generateUserToken(results.rows[0].id)
-                            }
-                        })
-                    }
-                })
-            }else{
-                res.status(201).send({
-                    error:"Failed to create a folder"
-                })
-            }
+            
         } else {
             res.status(403).send({error:"Fill all the required fields!!"})
         }
