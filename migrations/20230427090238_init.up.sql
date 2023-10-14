@@ -2,6 +2,7 @@
 create table users(
     email varchar not null primary key,
     folder_id varchar not null,
+    access_token varchar,
     group_folder_id varchar,
     username varchar not null,
     password varchar not null,
@@ -32,6 +33,7 @@ create table groups(
     email varchar not null primary key,
     groupname varchar not null unique,
     folder_id varchar not null,
+    access_token varchar,
     grouptype varchar not null,
     provider varchar,
     photo varchar,
