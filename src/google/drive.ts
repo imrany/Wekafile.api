@@ -178,20 +178,25 @@ drive.post('/create/:name',handleAuth,async(req:any, res:any) => {
 });
   
 
-drive.post('/download/:id', handleAuth,(req, res) => {
-    var fileId = req.params.id;
-    service.files.get({ fileId: fileId, alt: 'media' }, { responseType: 'stream' },
-        function (err:any, response:any) {
-            response.data
-                .on('end', () => {
-                    console.log('Done');
-                })
-                .on('error', (err:any) => {
-                    console.log('Error', err);
-                })
-                .pipe(res);
-        }
-    );
+drive.get('/download/:id', handleAuth,(req, res) => {
+    try {
+        let fileId = req.params.id;
+        service.files.get({ fileId: fileId, alt: 'media' }, { responseType: 'stream' },
+            function (err:any, response:any) {
+                response.data
+                    .on('end', () => {
+                        console.log('Done');
+                    })
+                    .on('error', (err:any) => {
+                        console.log('Error', err);
+                    })
+                    .pipe(res);
+            }
+        );
+    } catch (error:any) {
+        console.log(error)
+        res.status(500).send({error:error.message}) 
+    }
 })
 
 export default drive
