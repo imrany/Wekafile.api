@@ -51,7 +51,7 @@ export const createUserUploadFolder=async(req:Req,res:any)=>{
         })
         const folderId=request.data.id
         if (folderId){
-            pool.query('UPDATE users SET folder_id = $1, access_token=$2 WHERE email = $3 AND username=$4',[folderId,req.body.access_token,email,username], (error, results) => {
+            pool.query('UPDATE users SET folder_id = $1, access_token=$2 WHERE email = $3 AND username=$4 RETURNING *',[folderId,req.body.access_token,email,username], (error, results) => {
                 if(error){
                     console.log(error)
                     res.send({error:"Failed to create a folder!!"})
@@ -382,7 +382,7 @@ export const updateUser=async(req:any,res:any)=>{
         }else if(!username&&!password&&!photo&&access_token){
             //access token only
             pool.query(
-                'UPDATE users SET access_token = $1 WHERE email = $2',
+                'UPDATE users SET access_token = $1 WHERE email = $2 RETURNING *',
                 [access_token, email],
                 (error, results) => {
                     if (error) {
