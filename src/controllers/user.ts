@@ -187,7 +187,6 @@ export const updateUser=async(req:any,res:any)=>{
                 [username, password, photo, email],
                 (error, results) => {
                     if (error) {
-                        console.log(error)
                         res.status(501).send({error:`Failed to update account username, password and photo`})
                     }else{
                         res.status(200).send({msg:`Username, password and photo updated successful`})
