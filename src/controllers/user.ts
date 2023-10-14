@@ -51,12 +51,24 @@ export const createUserUploadFolder=async(req:Req,res:any)=>{
         })
         const folderId=request.data.id
         if (folderId){
-            pool.query('UPDATE users SET folder_id = $1 WHERE email = $2 AND username=$3',[folderId,email,username], (error, results) => {
+            pool.query('UPDATE users SET folder_id = $1, access_token=$2 WHERE email = $3 AND username=$4',[folderId,req.body.access_token,email,username], (error, results) => {
                 if(error){
                     console.log(error)
                     res.send({error:"Failed to create a folder!!"})
                 }else{
-                    res.send({msg:`Upload folder created successfull`})
+                    res.send({
+                        msg:`Upload folder created successfull`,
+                        data:{
+                            id:results.rows[0].id,
+                            username:results.rows[0].username,
+                            email:results.rows[0].email,
+                            access_token:results.rows[0].access_token,
+                            photo:results.rows[0].photo,
+                            group_folder_id:results.rows[0].group_folder_id,
+                            folder_id:results.rows[0].folder_id,
+                            token:generateUserToken(results.rows[0].id)
+                        }
+                    })
                 }
             })
         }else{
@@ -85,6 +97,7 @@ export const registerUser=async(req:Req,res:any)=>{
                             id:results.rows[0].id,
                             username:results.rows[0].username,
                             email:results.rows[0].email,
+                            access_token:results.rows[0].access_token,
                             photo:results.rows[0].photo,
                             group_folder_id:results.rows[0].group_folder_id,
                             folder_id:results.rows[0].folder_id,
@@ -125,6 +138,7 @@ export const loginUser=async(req:Req,res:any)=>{
                                             email:results.rows[0].email,
                                             folder_id:results.rows[0].folder_id,
                                             group_folder_id:results.rows[0].group_folder_id,
+                                            access_token:results.rows[0].access_token,
                                             photo:results.rows[0].photo,
                                             token:generateUserToken(results.rows[0].id)
                                         }
@@ -165,7 +179,7 @@ export const getUsers=async(req:Req,res:any)=>{
 export const updateUser=async(req:any,res:any)=>{
     try {
         const email = req.params.email
-        const { username, old_password,password, photo } = req.body
+        const { username, old_password,password, photo, access_token } = req.body
         if(username&&password&&photo){
             //update username, password and photo
             pool.query(
@@ -365,6 +379,31 @@ export const updateUser=async(req:any,res:any)=>{
                         })
                     }
             })
+        }else if(!username&&!password&&!photo&&access_token){
+            //access token only
+            pool.query(
+                'UPDATE users SET access_token = $1 WHERE email = $2',
+                [access_token, email],
+                (error, results) => {
+                    if (error) {
+                        console.log(error)
+                        res.status(501).send({error:`Failed to update account access token associated with email address ${email}}`})
+                    }else{
+                        res.status(200).send({
+                            msg:`Access token updated successful`,
+                            data:{
+                                id:results.rows[0].id,
+                                username:results.rows[0].username,
+                                email:results.rows[0].email,
+                                access_token:results.rows[0].access_token,
+                                photo:results.rows[0].photo,
+                                group_folder_id:results.rows[0].group_folder_id,
+                                folder_id:results.rows[0].folder_id,
+                                token:generateUserToken(results.rows[0].id)
+                            }
+                        })
+                    }
+            })
         }
     } catch (error:any) {
         res.status(500).send({error:error.message})
@@ -420,6 +459,7 @@ export const getUserDetails=async(req:Req,res:any)=>{
                             username:results.rows[0].username,
                             email:results.rows[0].email,
                             folder_id:results.rows[0].folder_id,
+                            access_token:results.rows[0].access_token,
                             group_folder_id:results.rows[0].group_folder_id,
                             group_ownership:results.rows[0].group_ownership,
                             photo:results.rows[0].photo,
