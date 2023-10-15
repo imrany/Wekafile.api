@@ -77,47 +77,25 @@ drive.post('/upload/:type/:folder_id',handleAuth,async(req:any, res:any) => {
                 body: createReadStream(files.filepath),
             };
             if(type==='users'){
-                pool.query('SELECT * FROM user_uploads WHERE filename = $1',[files.originalFilename],async (error,results)=>{
-                    if(error){
-                        console.log(error)
-                        res.status(400).send({error:'Failed upload file'})
-                    }else{
-                        if(!results.rows[0]){
-                            const response=await service.files.create(
-                                {
-                                    resource: fileMetadata,
-                                    media: media,
-                                    fields: "id",
-                                }
-                            );
-                            console.log(`${files.originalFilename} uploaded to folder ${folder_id} in drive`);
-                            res.send({id:response.data.id});
-                        }else{
-                          res.send({error:`${files.originalFilename} exist`})
-                        }
+                const response=await service.files.create(
+                    {
+                        resource: fileMetadata,
+                        media: media,
+                        fields: "id",
                     }
-                })
+                );
+                console.log(`${files.originalFilename} uploaded to folder ${folder_id} in drive`);
+                res.send({id:response.data.id});
             }else if(type==='groups'){
-                pool.query('SELECT * FROM group_uploads WHERE filename = $1',[files.originalFilename],async (error,results)=>{
-                    if(error){
-                        console.log(error)
-                        res.status(400).send({error:'Failed upload file'})
-                    }else{
-                        if(!results.rows[0]){
-                            const response=await service.files.create(
-                                {
-                                    resource: fileMetadata,
-                                    media: media,
-                                    fields: "id",
-                                }
-                            );
-                            console.log(`${files.originalFilename} uploaded to drive`);
-                            res.send({id:response.data.id});
-                        }else{
-                          res.send({error:`${files.originalFilename} exists`})
-                        }
+                const response=await service.files.create(
+                    {
+                        resource: fileMetadata,
+                        media: media,
+                        fields: "id",
                     }
-                })
+                );
+                console.log(`${files.originalFilename} uploaded to drive group folder ${folder_id} `);
+                res.send({id:response.data.id});
             }
         });
     } catch (error:any) {
