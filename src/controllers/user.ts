@@ -507,6 +507,44 @@ export const getMyUploads=async(req:any,res:any)=>{
     }
 }
 
+export const getSharedUploads=async(req:any,res:any)=>{
+    try {
+        const {username,email}=req.params
+        pool.query('SELECT filename,email,file,uploadedAt,size,type,username FROM user_uploads WHERE username = $1 AND $2=ANY(allowedEmails) OR username = $1 AND email=$2 OR username=$1 AND privacy=false',[username,email], (error, results) => {
+            if (error) {
+                console.log(error)
+                res.status(404).send({error:`Failed to get ${username}'s shared uploads!!`})
+            }else{
+                res.send({
+                    files:results.rows,
+                    count:results.rowCount
+                })
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
+
+export const removeSharedUploads=async(req:any,res:any)=>{
+    try {
+        const {email}=req.params
+        const {filename}=req.body
+        pool.query('UPDATE user_uploads SET allowedEmails = ARRAY_REMOVE(allowedEmails,$1) WHERE filename = $2',[email,filename], (error, results) => {
+            if (error) {
+                console.log(error)
+                res.status(404).send({error:`Failed to remove ${filename.slice(0,18)}...!!`})
+            }else{
+                res.send({
+                    msg:`${filename.slice(0,18)} remove successfull`
+                })
+            }
+        })
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+}
+
 export const postMyUploads=async(req:any,res:any)=>{
     try {
         const file_body=req.body.file_body
