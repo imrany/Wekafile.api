@@ -662,7 +662,7 @@ export const giveAccessToUpload=async(req:any,res:any)=>{
                 })
                 
             }else{
-                res.send({error:`Group using ${allowedEmail} does not exist!`})
+                res.send({error:`User using ${allowedEmail} does not exist!`})
             }
         })
     } catch (error:any) {
