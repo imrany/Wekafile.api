@@ -494,7 +494,7 @@ export const protectUser=async(req:any,res:any,next:any)=>{
 export const getMyUploads=async(req:any,res:any)=>{
     try {
         const email=req.params.email
-        pool.query('SELECT filename,email,file,uploadedAt,size,type,username FROM user_uploads WHERE email = $1',[email], (error, results) => {
+        pool.query('SELECT filename,email,file,uploadedAt,size,type,username,allowedEmails FROM user_uploads WHERE email = $1',[email], (error, results) => {
             if (error) {
                 console.log(error)
                 res.status(404).send({error:`Failed uploads.`})
@@ -510,7 +510,7 @@ export const getMyUploads=async(req:any,res:any)=>{
 export const getSharedUploads=async(req:any,res:any)=>{
     try {
         const {email}=req.params
-        pool.query('SELECT filename,email,file,uploadedAt,size,type,username FROM user_uploads WHERE $1=ANY(allowedEmails)',[email], (error, results) => {
+        pool.query('SELECT filename,email,file,uploadedAt,size,type,username,allowedEmails FROM user_uploads WHERE $1=ANY(allowedEmails)',[email], (error, results) => {
             if (error) {
                 console.log(error)
                 res.status(404).send({error:`Failed to get shared uploads!!`})
