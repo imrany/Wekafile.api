@@ -509,11 +509,11 @@ export const getMyUploads=async(req:any,res:any)=>{
 
 export const getSharedUploads=async(req:any,res:any)=>{
     try {
-        const {username,email}=req.params
-        pool.query('SELECT filename,email,file,uploadedAt,size,type,username FROM user_uploads WHERE username = $1 AND $2=ANY(allowedEmails) OR username = $1 AND email=$2 OR username=$1 AND privacy=false',[username,email], (error, results) => {
+        const {email}=req.params
+        pool.query('SELECT filename,email,file,uploadedAt,size,type,username FROM user_uploads WHERE $1=ANY(allowedEmails)',[email], (error, results) => {
             if (error) {
                 console.log(error)
-                res.status(404).send({error:`Failed to get ${username}'s shared uploads!!`})
+                res.status(404).send({error:`Failed to get shared uploads!!`})
             }else{
                 res.send({
                     files:results.rows,
