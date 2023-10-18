@@ -133,7 +133,6 @@ drive.post('/rename/:name/:folder_id',handleAuth,async(req:any, res:any) => {
         const name=req.params.name
         const fileMetadata = {
             name: `wekafile_${name}`,
-            mimeType: 'application/vnd.google-apps.folder',
         };
         const response=await service.files.update({ 
             resource: fileMetadata,
