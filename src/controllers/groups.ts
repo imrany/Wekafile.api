@@ -518,7 +518,7 @@ export const updateGroup=async(req:any,res:any)=>{
         }else if(!groupname&&!privacy&&groupphoto){
             //update photo only
             pool.query(
-                'SELECT photo,access_token FROM groups WHERE email = $2',
+                'SELECT photo,access_token FROM groups WHERE email = $1',
                 [email],
                 async(error, results) => {
                 if (error) {
@@ -579,7 +579,7 @@ export const updateGroup=async(req:any,res:any)=>{
                 }
             })
         }else if(groupname&&!privacy&&!groupphoto){
-            //update username only
+            //update groupname only
             pool.query(
                 'UPDATE users SET group_ownership = $1 WHERE email = $2',
                 [groupname, email],
@@ -589,13 +589,20 @@ export const updateGroup=async(req:any,res:any)=>{
                         res.status(501).send({error:`Failed to update group details associated with email address ${email}}`})
                     }else{
                         pool.query(
-                            'UPDATE groups SET groupname = $1 WHERE email = $2',
+                            'UPDATE groups SET groupname = $1 WHERE email = $2 RETURNING folder_id,access_token',
                             [groupname, email],
-                            (error, results) => {
+                            async(error, results) => {
                                 if (error) {
                                     console.log(error)
                                     res.status(501).send({error:`Failed to update graoup details associated with email address ${email}}`})
                                 }else{
+                                    const response=await axios.post(`${process.env.API_URL}/drive/rename/${groupname}/${results.rows[0].folder_id}`,{
+                                        headers:{
+                                            Authorization:`${results.rows[0].access_token}`,
+                                        }
+                                    })
+                                    const folderId=response.data.id
+                                    console.log(`Folder ${folderId} was rename to wekafile_${groupname}`)
                                     res.status(200).send({msg:`Group name updated successful`})
                                 }
                         })
