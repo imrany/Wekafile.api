@@ -120,7 +120,27 @@ drive.delete('/delete/:folder_id',handleAuth,async(req:any, res:any) => {
             "fileId":folderId,
             fields: "id",
         })
-        res.send({id:`${folderId} was deleted`})
+        res.send({id:`${response.data.id} was deleted`})
+    } catch (error:any) {
+      res.status(500).send({error:error.message})
+    }
+});
+
+//rename drive folder
+drive.post('/rename/:name/:folder_id',handleAuth,async(req:any, res:any) => {
+    try {
+        const folderId=req.params.folder_id
+        const name=req.params.name
+        const fileMetadata = {
+            name: `wekafile_${name}`,
+            mimeType: 'application/vnd.google-apps.folder',
+        };
+        const response=await service.files.update({ 
+            resource: fileMetadata,
+            "fileId":folderId,
+            fields: "id",
+        })
+        res.send({id:`${response.data.id} was renamed`})
     } catch (error:any) {
       res.status(500).send({error:error.message})
     }
