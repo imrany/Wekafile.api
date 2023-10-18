@@ -520,7 +520,7 @@ export const updateGroup=async(req:any,res:any)=>{
                                             if (error) {
                                                 console.log(error)
                                             }else{
-                                                const response=await axios.post(`${process.env.API_URL}/drive/rename/${groupname}/${details.folder_id}`,{
+                                                const response=await axios.post(`${process.env.API_URL}/drive/rename/${groupname}/${details.folder_id}`,{},{
                                                     headers:{
                                                         Authorization:`${details.access_token}`,
                                                     }
@@ -623,7 +623,7 @@ export const updateGroup=async(req:any,res:any)=>{
                                         if (error) {
                                             console.log(error)
                                         }else{
-                                            const response=await axios.post(`${process.env.API_URL}/drive/rename/${groupname}/${details.folder_id}`,{
+                                            const response=await axios.post(`${process.env.API_URL}/drive/rename/${groupname}/${details.folder_id}`,{},{
                                                 headers:{
                                                     Authorization:`${details.access_token}`,
                                                 }
