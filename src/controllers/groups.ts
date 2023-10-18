@@ -497,13 +497,14 @@ export const updateGroup=async(req:any,res:any)=>{
         }else if(groupname&&!privacy&&grouptype){
                 //update groupname and type only
                 pool.query(
-                    'UPDATE groups SET groupname = $1, grouptype = $2 WHERE email = $3',
+                    'UPDATE groups SET groupname = $1, grouptype = $2 WHERE email = $3 RETURNING folder_id,access_token',
                     [groupname, grouptype, email],
                     (error, results) => {
                         if (error) {
                             console.log(error)
                             res.status(501).send({error:`Failed to update group name and group type`})
                         }else{
+                            const details=results.rows[0]
                             pool.query(
                             'UPDATE users SET group_ownership = $1 WHERE email = $2',
                             [groupname, email],
@@ -512,7 +513,6 @@ export const updateGroup=async(req:any,res:any)=>{
                                     console.log(error)
                                     res.status(501).send({error:`Failed to update group details associated with email address ${email}}`})
                                 }else{
-                                    const details=results.rows[0]
                                         pool.query(
                                         'UPDATE group_uploads SET groupname = $1 WHERE email = $2',
                                         [groupname, email],
