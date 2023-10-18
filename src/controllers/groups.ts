@@ -13,7 +13,7 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
         })
         const folderId=request.data.id
         if (folderId&&groupname&&grouptype&&email){
-            pool.query('INSERT INTO groups (groupname,grouptype,email,lastLogin,userPlatform,privacy,folder_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [groupname,grouptype,email,lastLogin,userPlatform,privacy,folderId], (error:any, results) => {
+            pool.query('INSERT INTO groups (groupname,grouptype,email,lastLogin,userPlatform,privacy,folder_id,access_token) VALUES ($1, $2, $3, $4, $5, $6, $7,$8) RETURNING *', [groupname,grouptype,email,lastLogin,userPlatform,privacy,folderId,req.body.access_token], (error:any, results) => {
                 let group_results=results.rows[0]
                 if (error) {
                     res.status(408).send({error:`Account using ${email} already exist!`})
@@ -228,7 +228,7 @@ export const deleteSharedFile=async(req:any,res:any)=>{
 export const fetch_public_group_details=async(req:any,res:any)=>{
     try {
         const {groupname,email}=req.params
-        pool.query('SELECT email,grouptype,groupname,photo, privacy, members FROM groups WHERE groupname = $1 AND $2=ANY(members) OR groupname=$1 AND privacy=false OR groupname=$1 AND email=$2',[groupname,email], (error, results) => {
+        pool.query('SELECT email,grouptype,groupname,photo, privacy,folder_id,access_token,members FROM groups WHERE groupname = $1 AND $2=ANY(members) OR groupname=$1 AND privacy=false OR groupname=$1 AND email=$2',[groupname,email], (error, results) => {
             if (error) {
                 console.log(error)
                 res.status(404).send({error:`Failed to select group ${groupname}!!`})
@@ -518,14 +518,32 @@ export const updateGroup=async(req:any,res:any)=>{
         }else if(!groupname&&!privacy&&groupphoto){
             //update photo only
             pool.query(
-                'UPDATE groups SET photo = $1 WHERE email = $2',
-                [groupphoto, email],
-                (error, results) => {
+                'SELECT photo,access_token FROM groups WHERE email = $2',
+                [email],
+                async(error, results) => {
                 if (error) {
                     console.log(error)
-                    res.status(501).send({error:`Failed to update group photo`})
                 }else{
-                    res.status(200).send({msg:`Group photo updated`})
+                    if(results.rows[0].photo!==null){
+                        const response=await axios.delete(`${process.env.API_URL}/drive/delete/file/${results.rows[0].photo}`,{
+                            headers:{
+                                Authorization:`${results.rows[0].access_token}`,
+                            }
+                        })
+                        const id=response.data.id
+                        console.log(`Group photo was updated and previous id ${id} was deleted`)
+                    }
+                    pool.query(
+                        'UPDATE groups SET photo = $1 WHERE email = $2',
+                        [groupphoto, email],
+                        (error, results) => {
+                        if (error) {
+                            console.log(error)
+                            res.status(501).send({error:`Failed to update group photo`})
+                        }else{
+                            res.status(200).send({msg:`Group photo updated`})
+                        }   
+                    })
                 }   
             })
         }else if(!groupname&&privacy&&!groupphoto){
