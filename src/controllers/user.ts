@@ -275,33 +275,51 @@ export const updateUser=async(req:any,res:any)=>{
         }else if(!username&&!password&&photo){
             //update photo only
             pool.query(
-                'UPDATE users SET photo = $1 WHERE email = $2',
-                [photo, email],
-                (error, results) => {
-                    if (error) {
-                        console.log(error)
-                        res.status(501).send({error:`Failed to update account photo`})
-                    }else{
-                        res.status(200).send({msg:`Photo updated`})
-                        let mailTranporter=createTransport({
-                            service:'gmail',
-                            auth:{
-                                user:process.env.TRANSPORTER,
-                                pass:process.env.PASSWORD
-                            }
-                        });
-                        let details:MailDetails={
-                            from:process.env.TRANSPORTER,
-                            to:email,
-                            subject:`Your Account details were updated`,
-                            text:`Hello ,\n Your account user profile has been updated.\n\nVisit https://wekafile.web.app/`
-                        }
-                        mailTranporter.sendMail(details,(err:any)=>{
-                            if(err){
-                                console.log({error:`Cannot sent email, try again!`});
+                'SELECT photo,access_token FROM users WHERE email = $2',
+                [email],
+                async(error, results) => {
+                if (error) {
+                    console.log(error)
+                }else{
+                    if(results.rows[0].photo!==null){
+                        const response=await axios.delete(`${process.env.API_URL}/drive/delete/file/${results.rows[0].photo}`,{
+                            headers:{
+                                Authorization:`${results.rows[0].access_token}`,
                             }
                         })
+                        const id=response.data.id
+                        console.log(`User photo was updated and previous id ${id} was deleted`)
                     }
+                    pool.query(
+                        'UPDATE users SET photo = $1 WHERE email = $2',
+                        [photo, email],
+                        (error, results) => {
+                        if (error) {
+                            console.log(error)
+                            res.status(501).send({error:`Failed to update account photo`})
+                        }else{
+                            res.status(200).send({msg:`Photo updated`})
+                            let mailTranporter=createTransport({
+                                service:'gmail',
+                                auth:{
+                                    user:process.env.TRANSPORTER,
+                                    pass:process.env.PASSWORD
+                                }
+                            });
+                            let details:MailDetails={
+                                from:process.env.TRANSPORTER,
+                                to:email,
+                                subject:`Your Account details were updated`,
+                                text:`Hello ,\n Your account user profile has been updated.\n\nVisit https://wekafile.web.app/`
+                            }
+                            mailTranporter.sendMail(details,(err:any)=>{
+                                if(err){
+                                    console.log({error:`Cannot sent email, try again!`});
+                                }
+                            })
+                        }   
+                    })
+                }   
             })
         }else if(!username&&password&&!photo){
             //update password only
@@ -388,17 +406,27 @@ export const updateUser=async(req:any,res:any)=>{
                         console.log(error)
                         res.status(501).send({error:`Failed to update account access token associated with email address ${email}}`})
                     }else{
-                        res.status(200).send({
-                            msg:`Access token updated successful`,
-                            data:{
-                                id:results.rows[0].id,
-                                username:results.rows[0].username,
-                                email:results.rows[0].email,
-                                access_token:results.rows[0].access_token,
-                                photo:results.rows[0].photo,
-                                group_folder_id:results.rows[0].group_folder_id,
-                                folder_id:results.rows[0].folder_id,
-                                token:generateUserToken(results.rows[0].id)
+                        pool.query(
+                        'UPDATE groups SET access_token = $1 WHERE email = $2 RETURNING *',
+                        [access_token, email],
+                        (error, results) => {
+                            if (error) {
+                                console.log(error)
+                                res.status(501).send({error:`Failed to update group access token associated with email address ${email}}`})
+                            }else{
+                                res.status(200).send({
+                                    msg:`Access token updated successful`,
+                                    data:{
+                                        id:results.rows[0].id,
+                                        username:results.rows[0].username,
+                                        email:results.rows[0].email,
+                                        access_token:results.rows[0].access_token,
+                                        photo:results.rows[0].photo,
+                                        group_folder_id:results.rows[0].group_folder_id,
+                                        folder_id:results.rows[0].folder_id,
+                                        token:generateUserToken(results.rows[0].id)
+                                    }
+                                })
                             }
                         })
                     }
