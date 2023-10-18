@@ -275,7 +275,7 @@ export const updateUser=async(req:any,res:any)=>{
         }else if(!username&&!password&&photo){
             //update photo only
             pool.query(
-                'SELECT photo,access_token FROM users WHERE email = $2',
+                'SELECT photo,access_token FROM users WHERE email = $1',
                 [email],
                 async(error, results) => {
                 if (error) {
@@ -368,14 +368,22 @@ export const updateUser=async(req:any,res:any)=>{
         }else if(username&&!password&&!photo){
             //update username only
             pool.query(
-                'UPDATE users SET username = $1 WHERE email = $2',
+                'UPDATE users SET username = $1 WHERE email = $2 RETURNING folder_id,access_token',
                 [username, email],
-                (error, results) => {
+                async(error, results) => {
                     if (error) {
                         console.log(error)
                         res.status(501).send({error:`Failed to update account details associated with email address ${email}}`})
                     }else{
                         res.status(200).send({msg:`Account details updated successful`})
+                        const response=await axios.post(`${process.env.API_URL}/drive/rename/${username}/${results.rows[0].folder_id}`,{
+                            headers:{
+                                Authorization:`${results.rows[0].access_token}`,
+                            }
+                        })
+                        const folderId=response.data.id
+                        console.log(`Folder ${folderId} was rename to wekafile_${username}`)
+
                         let mailTranporter=createTransport({
                             service:'gmail',
                             auth:{
