@@ -34,5 +34,5 @@ router.get("/public_groups/:groupname/:email",fetch_public_group_details)
 router.post("/join_group/:groupname/:email",protectUser,join_group)
 router.post("/exit_group/:groupname/:email",protectUser,exit_group)
 
-router.delete("/delete/sharedfile/:filename",protectUser,deleteSharedFile)
+router.delete("/delete/sharedfile/:email/:filename",protectUser,deleteSharedFile)
 export default router

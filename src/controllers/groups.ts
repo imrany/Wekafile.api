@@ -13,11 +13,12 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
         })
         const folderId=request.data.id
         if (folderId&&groupname&&grouptype&&email){
-            pool.query('INSERT INTO groups (groupname,grouptype,email,lastLogin,userPlatform,privacy,folder_id,access_token) VALUES ($1, $2, $3, $4, $5, $6, $7,$8) RETURNING *', [groupname,grouptype,email,lastLogin,userPlatform,privacy,folderId,req.body.access_token], (error:any, results) => {
-                let group_results=results.rows[0]
+            pool.query('INSERT INTO groups (groupname,grouptype,email,lastLogin,userPlatform,privacy,folder_id,access_token) VALUES ($1, $2, $3, $4, $5, $6, $7,$8) RETURNING groupname,email', [groupname,grouptype,email,lastLogin,userPlatform,privacy,folderId,req.body.access_token], (error:any, results) => {
                 if (error) {
                     res.status(408).send({error:`Account using ${email} already exist!`})
+                    console.log(error)
                 }else{
+                    let group_results=results.rows[0]
                     pool.query('UPDATE users SET group_ownership = $1, group_folder_id=$2 WHERE email = $3 RETURNING *',[group_results.groupname,folderId,group_results.email],(error,results)=>{
                         if(error){
                             console.log(error)
@@ -201,7 +202,8 @@ export const giveGroupAccess=async(req:any,res:any)=>{
 export const deleteSharedFile=async(req:any,res:any)=>{
     try {
         const filename=req.params.filename
-        pool.query('DELETE FROM group_uploads WHERE filename = $1 RETURNING *',[filename],async(error,results)=>{
+        const email=req.params.email
+        pool.query('DELETE FROM group_uploads WHERE filename = $1 AND email=$2 RETURNING *',[filename,email],async(error,results)=>{
             if (error) {
                 res.status(408).send({error:`Failed to delete file ${filename.slice(0,25)}...`})
             }else{
@@ -235,7 +237,7 @@ export const fetch_public_group_details=async(req:any,res:any)=>{
             }else{
                 const details=results.rows[0]
                if(details){
-                    pool.query('SELECT filename,email,file,uploadedAt,size,type,groupname FROM group_uploads WHERE groupname = $1 AND $2=ANY(allowedEmails) OR groupname = $1 AND email=$2 OR groupname=$1 AND privacy=false',[details.groupname,email], (error, results) => {
+                    pool.query('SELECT filename,email,file,uploadedAt,size,type,allowedEmails,groupname FROM group_uploads WHERE groupname = $1 AND $2=ANY(allowedEmails) OR groupname = $1 AND email=$2 OR groupname=$1 AND privacy=false',[details.groupname,email], (error, results) => {
                         if (error) {
                             console.log(error)
                             res.status(404).send({error:`Failed to select group ${details.groupname}!!`})
@@ -323,7 +325,7 @@ export const uploadFile=async(req:any,res:any)=>{
                                     if (error) {
                                         res.send({error:`Failed store file, ${file_body.filename.slice(0,25)}... already exist!!`})
                                     }else{
-                                        pool.query('UPDATE group_uploads SET allowedEmails = ARRAY_APPEND(allowedEmails,$1) WHERE groupname = $2', [group.members,group.groupname], (error:any, results) => {
+                                        pool.query('UPDATE group_uploads SET allowedEmails =$1 WHERE groupname = $2', [group.members,group.groupname], (error:any, results) => {
                                             if (error) {
                                                 res.send({error:`Failed update file, ${file_body.filename.slice(0,25)}...!!`})
                                             }else{
