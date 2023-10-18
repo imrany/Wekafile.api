@@ -64,7 +64,7 @@ drive.post('/upload/:type/:folder_id',handleAuth,async(req:any, res:any) => {
         const {folder_id,type}=req.params
         var form =formidable({
             keepExtensions:true,
-            maxFileSize:10 * 1024 * 1024 //5mbs
+            maxFileSize:10 * 1024 * 1024 //10mbs
         });
         form.parse(req)
         form.on('file',async(name:any, files:any) => {
@@ -76,26 +76,24 @@ drive.post('/upload/:type/:folder_id',handleAuth,async(req:any, res:any) => {
                 mimeType: files.mimetype,
                 body: createReadStream(files.filepath),
             };
-            if(type==='users'){
-                const response=await service.files.create(
-                    {
-                        resource: fileMetadata,
-                        media: media,
-                        fields: "id",
-                    }
-                );
-                console.log(`${files.originalFilename} uploaded to folder ${folder_id} in drive`);
-                res.send({id:response.data.id});
-            }else if(type==='groups'){
-                const response=await service.files.create(
-                    {
-                        resource: fileMetadata,
-                        media: media,
-                        fields: "id",
-                    }
-                );
-                console.log(`${files.originalFilename} uploaded to drive group folder ${folder_id} `);
-                res.send({id:response.data.id});
+            const response=await service.files.create(
+                {
+                    resource: fileMetadata,
+                    media: media,
+                    fields: "id",
+                }
+            );
+            if(response.data){
+                if(type==='users'){
+                    console.log(`${files.originalFilename} uploaded to folder ${folder_id} in drive`);
+                    res.send({id:response.data.id});
+                }else if(type==='groups'){
+                    console.log(`${files.originalFilename} uploaded to drive group folder ${folder_id} `);
+                    res.send({id:response.data.id});
+                }
+            }else{
+                res.send({error:'File upload error!'})
+                console.log({error:response})
             }
         });
     } catch (error:any) {
