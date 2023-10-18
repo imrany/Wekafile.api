@@ -5,7 +5,7 @@ import axios from "axios";
 
 export const registerGroup=async(req:ReqGroup,res:any)=>{
     try {
-        const {groupname,grouptype,email,photo,lastLogin,userPlatform, privacy}=req.body.data;
+        const {groupname,grouptype,email,lastLogin,userPlatform, privacy}=req.body.data;
         const request=await axios.post(`${process.env.API_URL}/drive/create/${groupname}`,{},{
             headers:{
                 Authorization:`${req.body.access_token}`,
@@ -13,7 +13,7 @@ export const registerGroup=async(req:ReqGroup,res:any)=>{
         })
         const folderId=request.data.id
         if (folderId&&groupname&&grouptype&&email){
-            pool.query('INSERT INTO groups (groupname,grouptype,email,lastLogin,userPlatform,privacy,photo,folder_id) VALUES ($1, $2, $3, $4, $5, $6, $7,$8) RETURNING *', [groupname,grouptype,email,lastLogin,userPlatform,privacy,photo,folderId], (error:any, results) => {
+            pool.query('INSERT INTO groups (groupname,grouptype,email,lastLogin,userPlatform,privacy,folder_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [groupname,grouptype,email,lastLogin,userPlatform,privacy,folderId], (error:any, results) => {
                 let group_results=results.rows[0]
                 if (error) {
                     res.status(408).send({error:`Account using ${email} already exist!`})
@@ -127,6 +127,7 @@ export const deleteGroup=async(req:ReqGroup,res:any)=>{
                                         if (error) {
                                             res.status(408).send({error:`Failed to remove group_ownership from user, ${email}`})
                                         }else{
+                                            res.status(200).send({msg:`Group associated with email ${group_results.email} deteled successful`})
                                             let mailTranporter=createTransport({
                                                 service:'gmail',
                                                 auth:{
@@ -143,9 +144,7 @@ export const deleteGroup=async(req:ReqGroup,res:any)=>{
                                             mailTranporter.sendMail(details,(err:any)=>{
                                                 if(err){
                                                     res.send({error:`Cannot sent email, try again!`});
-                                                } else{
-                                                    res.status(200).send({msg:`Group associated with email ${group_results.email} deteled successful`})
-                                                }
+                                                } 
                                             }) 
                                         }
                                     })
