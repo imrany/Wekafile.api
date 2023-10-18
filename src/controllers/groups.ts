@@ -495,7 +495,7 @@ export const updateGroup=async(req:any,res:any)=>{
                     }
             })
         }else if(groupname&&!privacy&&grouptype){
-                //update username and photo only
+                //update groupname and type only
                 pool.query(
                     'UPDATE groups SET groupname = $1, grouptype = $2 WHERE email = $3',
                     [groupname, grouptype, email],
@@ -512,7 +512,24 @@ export const updateGroup=async(req:any,res:any)=>{
                                     console.log(error)
                                     res.status(501).send({error:`Failed to update group details associated with email address ${email}}`})
                                 }else{
-                                    res.status(200).send({msg:`Group name and group type updated successful`})
+                                    const details=results.rows[0]
+                                        pool.query(
+                                        'UPDATE group_uploads SET groupname = $1 WHERE email = $2',
+                                        [groupname, email],
+                                        async(error, results) => {
+                                            if (error) {
+                                                console.log(error)
+                                            }else{
+                                                const response=await axios.post(`${process.env.API_URL}/drive/rename/${groupname}/${details.folder_id}`,{
+                                                    headers:{
+                                                        Authorization:`${details.access_token}`,
+                                                    }
+                                                })
+                                                const folderId=response.data.id
+                                                console.log(`Folder ${folderId} was rename to wekafile_${groupname}`)
+                                                res.status(200).send({msg:`Group name and group type updated successful`})
+                                            }
+                                        })
                                 }
                             })        
                         }
