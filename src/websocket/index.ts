@@ -6,7 +6,7 @@ export default function socket(io:any){
         console.log(`a user connected: ${socket.id}, ClientIP : ${clientIp} `);
 
         socket.on("update", (update:string, err:any) => {
-            socket.emit("response",update)
+            io.emit("response",update)
             if(err){
                 console.log(err)
             }
@@ -14,7 +14,7 @@ export default function socket(io:any){
         
         //disconnect
         socket.on("disconnect", (reason:any) => {
-            socket.emit(`${reason} has left`)
+            io.emit(`${reason} has left`)
         });
     });
 }
