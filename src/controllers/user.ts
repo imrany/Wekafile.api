@@ -411,28 +411,43 @@ export const updateUser=async(req:any,res:any)=>{
                         console.log(error)
                         res.status(501).send({error:`Failed to update account access token associated with email address ${email}}`})
                     }else{
-                        pool.query(
-                        'UPDATE groups SET access_token = $1 WHERE email = $2 RETURNING *',
-                        [access_token, email],
-                        (error, results) => {
-                            if (error) {
-                                console.log(error)
-                                res.status(501).send({error:`Failed to update group access token associated with email address ${email}}`})
-                            }else{
-                                res.status(200).send({
-                                    msg:`Access token updated successful`,
-                                    data:{
-                                        username:results.rows[0].username,
-                                        email:results.rows[0].email,
-                                        access_token:results.rows[0].access_token,
-                                        photo:results.rows[0].photo,
-                                        group_folder_id:results.rows[0].group_folder_id,
-                                        folder_id:results.rows[0].folder_id,
-                                        token:generateUserToken(results.rows[0].id)
-                                    }
-                                })
-                            }
-                        })
+                        if (results.rows[0].group_ownership===null||!results.rows[0].group_ownership) {
+                            res.status(200).send({
+                                msg:`Access token updated successful`,
+                                data:{
+                                    username:results.rows[0].username,
+                                    email:results.rows[0].email,
+                                    access_token:results.rows[0].access_token,
+                                    photo:results.rows[0].photo,
+                                    group_folder_id:results.rows[0].group_folder_id,
+                                    folder_id:results.rows[0].folder_id,
+                                    token:generateUserToken(results.rows[0].id)
+                                }
+                            })
+                        } else {
+                            pool.query(
+                            'UPDATE groups SET access_token = $1 WHERE email = $2 RETURNING *',
+                            [access_token, email],
+                            (error, results) => {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(501).send({error:`Failed to update group access token associated with email address ${email}}`})
+                                }else{
+                                    res.status(200).send({
+                                        msg:`Access token updated successful`,
+                                        data:{
+                                            username:results.rows[0].username,
+                                            email:results.rows[0].email,
+                                            access_token:results.rows[0].access_token,
+                                            photo:results.rows[0].photo,
+                                            group_folder_id:results.rows[0].group_folder_id,
+                                            folder_id:results.rows[0].folder_id,
+                                            token:generateUserToken(results.rows[0].id)
+                                        }
+                                    })
+                                }
+                            })
+                        }
                     }
             })
         }
