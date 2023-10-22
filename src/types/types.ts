@@ -19,8 +19,7 @@ export interface Req{
     },
     params:{
         email:string,
-        folder_id:string,
-        id:string
+        folder_id:string
     }
 }
 
@@ -42,8 +41,7 @@ export interface ReqGroup{
     },
     params:{
         email:string,
-        folder_id:string,
-        id:string
+        folder_id:string
     }
 }
 

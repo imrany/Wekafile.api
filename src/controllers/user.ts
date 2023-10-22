@@ -59,7 +59,6 @@ export const createUserUploadFolder=async(req:Req,res:any)=>{
                     res.send({
                         msg:`Upload folder created successfull`,
                         data:{
-                            id:results.rows[0].id,
                             username:results.rows[0].username,
                             email:results.rows[0].email,
                             access_token:results.rows[0].access_token,
@@ -94,7 +93,6 @@ export const registerUser=async(req:Req,res:any)=>{
                     res.status(201).send({
                         msg:`Welcome ${results.rows[0].username}`,
                         data:{
-                            id:results.rows[0].id,
                             username:results.rows[0].username,
                             email:results.rows[0].email,
                             access_token:results.rows[0].access_token,
@@ -133,7 +131,6 @@ export const loginUser=async(req:Req,res:any)=>{
                                     res.status(201).send({
                                         msg:`Welcome ${results.rows[0].username}`,
                                         data:{
-                                            id:results.rows[0].id,
                                             username:results.rows[0].username,
                                             email:results.rows[0].email,
                                             folder_id:results.rows[0].folder_id,
@@ -425,7 +422,6 @@ export const updateUser=async(req:any,res:any)=>{
                                 res.status(200).send({
                                     msg:`Access token updated successful`,
                                     data:{
-                                        id:results.rows[0].id,
                                         username:results.rows[0].username,
                                         email:results.rows[0].email,
                                         access_token:results.rows[0].access_token,
@@ -490,7 +486,6 @@ export const getUserDetails=async(req:Req,res:any)=>{
                 if(results.rows[0]){
                     res.status(200).json({
                         data:{
-                            id:results.rows[0].id,
                             username:results.rows[0].username,
                             email:results.rows[0].email,
                             folder_id:results.rows[0].folder_id,

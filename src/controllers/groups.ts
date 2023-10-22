@@ -579,7 +579,6 @@ export const updateGroup=async(req:any,res:any)=>{
                         }else{
                             const resp=privacy===true?"private":"public"
                             let data={
-                                id:results.rows[0].id,
                                 groupname:results.rows[0].groupname,
                                 email:results.rows[0].email,
                                 photo:results.rows[0].photo,
