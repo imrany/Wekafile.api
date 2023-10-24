@@ -3,7 +3,6 @@ import { createTransport } from "nodemailer"
 import { MailDetails, Req } from "../types/types";
 import {genSalt, compare, hash} from "bcryptjs";
 import { verify, sign } from "jsonwebtoken"
-import { readFileSync } from 'fs'
 import axios from "axios"
 
 export const verifyEmail=async(req:Req,res:any)=>{
@@ -404,10 +403,9 @@ export const updateUser=async(req:any,res:any)=>{
             })
         }else if(!username&&!password&&!photo&&access_token){
             //access token only
-            const creds:any=readFileSync('creds.json')
             pool.query(
                 'UPDATE users SET access_token = $1 WHERE email = $2 RETURNING *',
-                [JSON.parse(creds), email],
+                [access_token, email],
                 (error, results) => {
                     if (error) {
                         console.log(error)
@@ -429,7 +427,7 @@ export const updateUser=async(req:any,res:any)=>{
                         } else {
                             pool.query(
                             'UPDATE groups SET access_token = $1 WHERE email = $2 RETURNING *',
-                            [JSON.parse(creds), email],
+                            [access_token, email],
                             (error, results) => {
                                 if (error) {
                                     console.log(error)
