@@ -18,19 +18,18 @@ const service:any = google.drive({
 const drive=express.Router()
 
 const handleAuth=async(req:any,res:any,next:any)=>{
-    let token
-    if(req.headers.authorization){
-        try{
-            token=req.headers.authorization
-            await oauth2Client.setCredentials(JSON.parse(token))
+    try{
+        if(req.headers.authorization){
+            let token=req.headers.authorization
+            const authenticate=oauth2Client.setCredentials(JSON.parse(token))
+            console.log(authenticate)
             next()
-        }catch (error:any){
-            res.status(401).send({error:'Not Authorised☠'})
-            console.log(error)
+        }else{
+            res.status(401).send({error:'No Token Available☠'})
         }
-    }
-    if(!token){
-      res.status(401).send({error:'No Token Available☠'})
+    }catch (error:any){
+        res.status(401).send({error:'Not Authorised☠'})
+        console.log(error)
     }
 };
 
@@ -177,7 +176,12 @@ drive.get('/download/:id', handleAuth,(req, res) => {
     try {
         let fileId = req.params.id;
         service.files.get({ fileId: fileId, alt: 'media' }, { responseType: 'stream' },
-            function (err:any, response:any) {
+            function (error:any, response:any) {
+              if(error){
+                console.log(error.message)
+                res.send({error:error.message})
+                return error
+              }
                 response.data
                     .on('end', () => {
                         console.log('Done');
