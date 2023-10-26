@@ -411,38 +411,57 @@ export const updateUser=async(req:any,res:any)=>{
                         console.log(error)
                         res.status(501).send({error:`Failed to update account access token associated with email address ${email}}`})
                     }else{
-                        if (results.rows[0].group_ownership===null||!results.rows[0].group_ownership) {
+                        let details=results.rows[0]
+                        if (details.group_ownership===null||!details.group_ownership) {
                             res.status(200).send({
                                 msg:`Access token updated successful`,
                                 data:{
-                                    username:results.rows[0].username,
-                                    email:results.rows[0].email,
-                                    access_token:results.rows[0].access_token,
-                                    photo:results.rows[0].photo,
-                                    group_folder_id:results.rows[0].group_folder_id,
-                                    folder_id:results.rows[0].folder_id,
-                                    token:generateUserToken(results.rows[0].id)
+                                    username:details.username,
+                                    email:details.email,
+                                    access_token:details.access_token,
+                                    photo:details.photo,
+                                    group_folder_id:details.group_folder_id,
+                                    folder_id:details.folder_id,
+                                    token:generateUserToken(details.id)
                                 }
                             })
                         } else {
                             pool.query(
                             'UPDATE groups SET access_token = $1 WHERE email = $2 RETURNING *',
                             [access_token, email],
-                            (error, results) => {
+                            async(error, results) => {
                                 if (error) {
                                     console.log(error)
                                     res.status(501).send({error:`Failed to update group access token associated with email address ${email}}`})
                                 }else{
+                                    if (details.folder_id===null&&details.access_token!==null) {
+                                        const request=await axios.post(`${process.env.API_URL}/api/provider/user/${email}`,{
+                                            access_token:details.access_token,
+                                            data:{
+                                                username:details.username
+                                            }
+                                        },{
+                                            headers:{
+                                                Authorization:`Bearer ${generateUserToken(details.id)}`,
+                                            }
+                                        })
+                                        if(request.data){
+                                            console.log(request.data)
+                                        }else{
+                                            console.log(request)
+                                        }
+                                    }
+                                    
                                     res.status(200).send({
                                         msg:`Access token updated successful`,
                                         data:{
-                                            username:results.rows[0].username,
-                                            email:results.rows[0].email,
-                                            access_token:results.rows[0].access_token,
-                                            photo:results.rows[0].photo,
-                                            group_folder_id:results.rows[0].group_folder_id,
-                                            folder_id:results.rows[0].folder_id,
-                                            token:generateUserToken(results.rows[0].id)
+                                            username:details.username,
+                                            email:details.email,
+                                            access_token:details.access_token,
+                                            photo:details.photo,
+                                            group_folder_id:details.group_folder_id,
+                                            folder_id:details.folder_id,
+                                            token:generateUserToken(details.id)
                                         }
                                     })
                                 }
