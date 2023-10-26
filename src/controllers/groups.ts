@@ -124,7 +124,7 @@ export const deleteGroup=async(req:ReqGroup,res:any)=>{
                             }else{
                                 let group_results=results.rows[0]
                                 if (group_results) {
-                                    pool.query('UPDATE users SET group_ownership = null WHERE email = $1 RETURNING *', [email], (error, results) => {
+                                    pool.query('UPDATE users SET group_ownership = null, group_folder_id = null WHERE email = $1 RETURNING *', [email], (error, results) => {
                                         if (error) {
                                             res.status(408).send({error:`Failed to remove group_ownership from user, ${email}`})
                                         }else{
