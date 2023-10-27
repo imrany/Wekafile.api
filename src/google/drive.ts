@@ -2,6 +2,7 @@ import express from "express"
 import { google } from "googleapis"
 import formidable from "formidable"
 import {writeFileSync, createReadStream, readFileSync } from 'fs'
+import axios from 'axios'
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
@@ -50,14 +51,26 @@ drive.get('/google/redirect',async(req:any,res:any)=>{
         const {tokens}= await oauth2Client.getToken(code)
         oauth2Client.setCredentials(tokens)
         writeFileSync('creds.json',JSON.stringify(tokens))
+        res.status(200).send({msg:'success'})
+        const request=await axios.post(`${process.env.API_URL}/drive/send_token`,{},{
+            
+        })
+        const response=request.data
+        console.log(response)
+    } catch (error:any) {
+        res.status(500).send({error:error.message})
+    }
+});
+
+drive.post('/send_token',async(req:any,res:any)=>{
+    try {
         const creds:any=readFileSync('creds.json')
         let redirect_url=`${process.env.CLIENT_URL}/provider?access_token=${creds}`
         res.redirect(redirect_url)
     } catch (error:any) {
         res.status(500).send({error:error.message})
     }
-});
-
+})
 //upload file
 drive.post('/upload/:type/:folder_id',handleAuth,async(req:any, res:any) => {
     try {
