@@ -1,7 +1,7 @@
 import express from "express"
 import { google } from "googleapis"
 import formidable from "formidable"
-import {writeFileSync, createReadStream, readFileSync } from 'fs'
+import {createReadStream } from 'fs'
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
@@ -49,10 +49,7 @@ drive.get('/google/redirect',async(req:any,res:any)=>{
         const code:any=req.query.code
         const {tokens}= await oauth2Client.getToken(code)
         oauth2Client.setCredentials(tokens)
-        writeFileSync('creds.json',JSON.stringify(tokens))
-        const creds:any=readFileSync('creds.json')
-        let redirect_url=`${process.env.CLIENT_URL}/provider?access_token=${creds}`
-        console.log(creds, tokens)
+        let redirect_url=`${process.env.CLIENT_URL}/provider?access_token=${JSON.stringify(tokens)}`
         res.redirect(redirect_url)
     } catch (error:any) {
         res.status(500).send({error:error.message})
