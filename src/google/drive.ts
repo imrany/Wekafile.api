@@ -52,6 +52,7 @@ drive.get('/google/redirect',async(req:any,res:any)=>{
         writeFileSync('creds.json',JSON.stringify(tokens))
         const creds:any=readFileSync('creds.json')
         let redirect_url=`${process.env.CLIENT_URL}/provider?access_token=${creds}`
+        console.log(creds, tokens)
         res.redirect(redirect_url)
     } catch (error:any) {
         res.status(500).send({error:error.message})
