@@ -142,8 +142,8 @@ export const loginUser=async(req:Req,res:any)=>{
                                     })
                                 }
                             })
-                        } else {
-                            res.status(401).send({error:'Invalid Credentials'})
+                        }else if(await compare(password,results.rows[0].password)===false){
+                            res.status(401).send({error:'You have enter the wrong password'})
                         }
                     }else{
                         res.status(404).send({error:`Account associated with email ${email} does not exist!`})
