@@ -25,3 +25,5 @@ Then Run
 ```bash 
 docker-compose up -d
 ```
+### Run migration
+sqlx migrate run
